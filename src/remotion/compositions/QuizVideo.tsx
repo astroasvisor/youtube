@@ -26,7 +26,8 @@ export const QuizVideo: React.FC<{
   questions: Question[]
   title: string
 }> = ({ questions, title }) => {
-  const totalDuration = questions.length * 20 // 20 seconds per question (10s question + 10s answer)
+  // 50 seconds per question (35s question + 15s answer)
+  const totalDuration = questions.length * 50
 
   return (
     <Composition
@@ -51,8 +52,8 @@ const QuizVideoComposition: React.FC<{
   const { fps, durationInFrames } = useVideoConfig()
 
   // Calculate timing for the entire video
-  const questionDuration = 10 * fps // 10 seconds per question
-  const answerDuration = 10 * fps // 10 seconds per answer
+  const questionDuration = 35 * fps // 35 seconds per question
+  const answerDuration = 15 * fps // 15 seconds per answer
   const totalPerQuestion = questionDuration + answerDuration
 
   return (

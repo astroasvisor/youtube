@@ -7,20 +7,21 @@ The Quiz Video Generator uses **Remotion** to create professional YouTube Shorts
 
 ### 🎯 Core Video Structure
 
-#### Video Timeline (20 seconds total)
+#### Video Timeline (50 seconds total)
 ```
-[0-10s] Question Phase     → [10-20s] Answer Reveal Phase
-    ↓                           ↓
-Timer + Options          Correct Answer + Explanation
+[0-5s] Intro              → [5-35s] Question Phase     → [35-50s] Answer Reveal Phase
+    ↓                         ↓                           ↓
+"Time starts now"         Timer + Options + Like    Correct Answer + Explanation + Subscribe
 ```
 
-**Note**: Full 20-second videos now render correctly with both phases properly timed.
+**Note**: Full 50-second videos now render correctly with proper timing, audio synchronization, and engagement elements.
 
 #### Technical Specifications
-- **Duration**: 20 seconds (optimized for YouTube Shorts)
+- **Duration**: 50 seconds (optimized for YouTube Shorts with engagement)
 - **Resolution**: 1080x1920 (9:16 aspect ratio)
 - **Frame Rate**: 30 FPS
 - **Format**: MP4 (H.264)
+- **Timer**: 200px → 120px circular countdown (30s countdown from t=5s to t=35s)
 
 ### 🎨 Visual Design System
 
@@ -75,9 +76,10 @@ const getOptionEntrance = (index: number) => {
 
 ##### Timer Animation
 ```typescript
-// Pulsing countdown timer
+// Bigger pulsing countdown timer (200px → 120px)
 const timerPulse = 1 + Math.sin(frame / 10) * 0.05  // Subtle breathing effect
-const countdownSize = Math.max(20, 100 - (frame / totalFrames) * 80)  // Shrinking effect
+const shrinkProgress = Math.min(1, frame / (questionPhaseFrames * 0.8))
+const countdownSize = Math.max(120, 200 - shrinkProgress * 80)  // 200px → 120px
 ```
 
 ##### Phase Transition Animation
@@ -123,9 +125,10 @@ const confettiParticles = Array.from({ length: 35 }, (_, i) => {
 #### Audio Files Structure
 ```
 /public/audio/
-├── timer-with-chime.mp3    # 12s (10s timer + 2s chime)
-├── celebration.mp3         # 1s positive chime
-└── background-music.mp3    # 29s ambient track (loops)
+├── timer.mp3              # 10s timer sound (loops 3 times during 30s countdown)
+├── chime.mp3              # 1s chime sound (plays at question→answer transition)
+├── celebration.mp3        # 1s positive chime (plays after chime)
+└── background-music.mp3   # 29s ambient track (loops throughout video)
 
 **Note**: Audio files must be placed in `/public/audio/` directory.
 In Remotion, use `staticFile("audio/filename.mp3")` to reference these files.
@@ -136,34 +139,42 @@ In Remotion, use `staticFile("audio/filename.mp3")` to reference these files.
 import { staticFile } from "remotion"
 
 // Synchronized audio timing
-const shouldPlayTimerAudio = isQuestionPhase
-const shouldPlayCelebration = isAnswerPhase && frame >= celebrationSoundFrame
+const shouldPlayTimerAudio = isCountdownVisible  // t=5s to t=35s
+const shouldPlayChimeAudio = frame >= questionPhaseFrames && frame < questionPhaseFrames + fps
+const shouldPlayCelebration = frame >= questionPhaseFrames + fps && frame < questionPhaseFrames + 2*fps
 
-// Synchronized audio timing throughout both phases
+// Synchronized audio timing throughout all phases
 Audio Components: {
   timerAudio: {
-    src: staticFile("audio/timer-with-chime.mp3"),
+    src: staticFile("audio/timer.mp3"),
     volume: 0.4,  // Clear but not overwhelming
-    timing: "Plays throughout question phase (12s file)"
+    loop: true,   // Loops 3 times during 30s countdown
+    timing: "Plays during countdown phase (t=5s to t=35s)"
+  },
+  chime: {
+    src: staticFile("audio/chime.mp3"),
+    volume: 0.6,  // Clear transition sound
+    timing: "Plays at question→answer transition (t=35s)"
   },
   celebration: {
     src: staticFile("audio/celebration.mp3"),
-    volume: 0.7,  // Increased for better audibility
-    timing: "0.3s after answer phase starts (1.2s duration)"
+    volume: 0.7,  // Positive reinforcement
+    timing: "Plays after chime (t=35s+1s)"
   },
   background: {
     src: staticFile("audio/background-music.mp3"),
     volume: 0.1,  // Subtle background presence
     loop: true,   // Continuous throughout entire video
-    timing: "Plays throughout entire 20-second video"
+    timing: "Plays throughout entire 40-second video"
   }
 }
 ```
 
 #### Audio Psychology
-- **Timer Audio**: Creates urgency and time pressure (motivation)
-- **Celebration Sound**: Positive reinforcement (reward system)
-- **Background Music**: Brand consistency and familiarity
+- **Timer Audio**: Creates urgency and time pressure (motivation) - loops 3 times during 30s countdown
+- **Chime Sound**: Clear transition signal from question to answer phase
+- **Celebration Sound**: Positive reinforcement (reward system) - plays after chime
+- **Background Music**: Brand consistency and familiarity - continuous throughout video
 
 ### 🎯 Psychology-Based Design Principles
 
@@ -236,9 +247,9 @@ export const QuizQuestion: React.FC<{ question: Question }> = ({ question }) => 
 ### 📊 Quality Metrics
 
 #### Performance Benchmarks
-- **Render Time**: < 30 seconds for 20-second video
-- **File Size**: ~2-4 MB per video (optimized compression)
-- **Animation Smoothness**: 60 FPS consistent playback
+- **Render Time**: < 75 seconds for 50-second video
+- **File Size**: ~5-10 MB per video (optimized compression)
+- **Animation Smoothness**: 30 FPS consistent playback
 
 #### Accessibility Features
 - **High Contrast**: WCAG AA compliant color ratios

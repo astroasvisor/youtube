@@ -70,7 +70,7 @@ You MUST respond with valid JSON in exactly this format:
 Do not include any other text, markdown, or formatting. Just the JSON object.`
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4.1-mini", // gpt-3.5-turbo is too old. currently the most advanced model for our task is gpt-4.1-mini
       messages: [
         {
           role: "system",

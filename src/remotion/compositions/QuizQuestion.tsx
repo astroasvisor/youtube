@@ -1,20 +1,22 @@
 import React from "react"
-import { useCurrentFrame, useVideoConfig, spring, Audio, staticFile } from "remotion"
+import { useCurrentFrame, useVideoConfig, spring, Audio, staticFile, Sequence } from "remotion"
 
 /*
 🎵 AUDIO FILES CONFIGURED:
 Your audio files are set up and ready to use:
 
+✓ timer.mp3 (10s) - Timer sound that loops 3 times during 30s countdown
+✓ chime.mp3 (1s) - Transition sound at question→answer phase change
 ✓ celebration.mp3 (1s) - Positive success chime for answer reveals
 ✓ background-music.mp3 (29s) - Subtle ambient music (loops automatically)
-✓ timer-with-chime.mp3 (12s) - Combined timer + chime sound for question phase
 
 Volume levels are optimized:
 - Timer: 40% (clear but not overwhelming)
+- Chime: 60% (clear transition signal)
 - Celebration: 70% (rewarding success feedback)
 - Background: 10% (subtle brand presence)
 
-All audio timing is synchronized with the 20-second video structure.
+All audio timing is synchronized with the 50-second video structure.
 */
 
 interface Question {
@@ -34,19 +36,48 @@ export const QuizQuestion: React.FC<{
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
-  // 20 second total duration: 10s question + 10s answer reveal
-  const questionPhaseFrames = 10 * fps
-  const answerPhaseFrames = 10 * fps
+  // 50 second total duration: 35s question + 15s answer reveal
+  const questionPhaseFrames = 35 * fps
+  const answerPhaseFrames = 15 * fps
 
   const isQuestionPhase = frame < questionPhaseFrames
   const isAnswerPhase = frame >= questionPhaseFrames
 
-  // Question phase countdown
-  const questionRemainingTime = Math.max(0, 10 - frame / fps)
+  // Fixed Countdown Logic: Start at t=5s, count down from 30s for 30 seconds
+  const countdownStartsAt = 5 * fps
+  const countdownEndsAt = 35 * fps
+  const countdownDuration = countdownEndsAt - countdownStartsAt
+  const timeDisplayed = Math.max(0, Math.ceil(
+    30 - ((frame - countdownStartsAt) / fps)
+  ))
+  const isCountdownVisible = frame >= countdownStartsAt && frame < countdownEndsAt
+
   const countdownSize = Math.max(
-    20,
-    100 - (frame / questionPhaseFrames) * 80,
+    120,
+    200 -
+      (Math.max(0, frame - countdownStartsAt) / countdownDuration) * 80,
   ) // Shrinking effect
+
+  // "Your time starts now" message animation
+  const messageStart = 2 * fps
+  const messageEnd = 5 * fps
+  const messageOpacity =
+    frame >= messageStart && frame < messageEnd
+      ? spring({
+          frame: frame - messageStart,
+          fps,
+          config: { damping: 200, stiffness: 100 },
+          from: 0,
+          to: 1,
+        }) -
+        spring({
+          frame: frame - (messageEnd - fps),
+          fps,
+          config: { damping: 200, stiffness: 100 },
+          from: 0,
+          to: 1,
+        })
+      : 0
 
   // --- Animation Logic ---
 
@@ -81,6 +112,10 @@ export const QuizQuestion: React.FC<{
 
   // Timer pulse animation
   const timerPulse = 1 + Math.sin(frame / 10) * 0.05
+
+  // Timer fade out as it approaches the end
+  const timeLeftRatio = timeDisplayed / 30
+  const timerOpacity = timeLeftRatio > 0.2 ? 1 : Math.max(0, timeLeftRatio / 0.2) // Fade out in last 6 seconds
 
   // Cross-fade animation between question and answer elements
   const questionElementsOpacity = spring({
@@ -133,9 +168,34 @@ export const QuizQuestion: React.FC<{
   }).filter(Boolean) as ConfettiParticle[]
 
   // --- Audio Logic ---
-  const shouldPlayTimerAudio = isQuestionPhase
-  const celebrationSoundFrame = questionPhaseFrames + fps * 0.3
-  const shouldPlayCelebration = frame >= celebrationSoundFrame && frame < celebrationSoundFrame + fps * 1.2
+  // Timer audio: Loop timer.mp3 (10s) 3 times during countdown
+  const shouldPlayTimerAudio = isCountdownVisible
+  const timerLoopCount = 3
+  const timerLoopDuration = 10 * fps // 10 seconds per loop
+  
+  // Audio timing frames
+  const chimeStartFrame = questionPhaseFrames
+  const celebrationStartFrame = chimeStartFrame + fps
+
+  // Like button timing (appears at 15s and shows for rest of question phase)
+  const likeButtonStartFrame = 15 * fps
+  const shouldShowLikeButton = frame >= likeButtonStartFrame && isQuestionPhase
+
+  // Explanation card timing (appears 2 seconds after answer phase starts to sync with celebration)
+  const explanationStartFrame = questionPhaseFrames + 2 * fps
+  const shouldShowExplanation = frame >= explanationStartFrame && isAnswerPhase
+
+  // Subscribe button timing (appears after explanation card is fully visible)
+  const subscribeStartFrame = explanationStartFrame + 1 * fps // 1 second after explanation appears
+  const shouldShowSubscribe = frame >= subscribeStartFrame && isAnswerPhase
+
+  // Debug: Log when we're at the transition point
+  if (frame === chimeStartFrame) {
+    console.log(`🎵 Chime should play at frame ${chimeStartFrame} (t=${chimeStartFrame/fps}s)`)
+  }
+  if (frame === celebrationStartFrame) {
+    console.log(`🎉 Celebration should play at frame ${celebrationStartFrame} (t=${celebrationStartFrame/fps}s)`)
+  }
 
   return (
     <div
@@ -145,28 +205,45 @@ export const QuizQuestion: React.FC<{
         position: "relative",
       }}
     >
+      <style>
+        {`
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+        `}
+      </style>
       {/* --- Question Phase Elements --- */}
-      <div
-        style={{
-          opacity: questionElementsOpacity,
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          padding: "90px 40px 60px 40px",
-          position: "absolute",
-          top: 0,
-          left: 0,
-        }}
-      >
+      <div style={{ opacity: questionElementsOpacity, width: "100%", height: "100%", display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '90px 40px 60px 40px', position: 'absolute', top: 0, left: 0 }}>
+        {/* "Your time starts now" message */}
+        <div
+          style={{
+            position: "absolute",
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            opacity: messageOpacity,
+            background: "rgba(0,0,0,0.7)",
+            color: "white",
+            padding: "20px 40px",
+            borderRadius: "15px",
+            fontSize: "48px",
+            fontWeight: "bold",
+            zIndex: 200,
+          }}
+        >
+          Your time starts now
+        </div>
+
         {/* Timer */}
         <div
           style={{
             position: "absolute",
             top: "30px",
             right: "40px",
+            opacity: isCountdownVisible ? timerOpacity : 0,
+            zIndex: 100, // High z-index to stay in front of question card
           }}
         >
           <div
@@ -185,14 +262,14 @@ export const QuizQuestion: React.FC<{
           >
             <span
               style={{
-                fontSize: `${countdownSize * 0.35}px`,
+                fontSize: `${countdownSize * 0.3}px`, // Adjusted for larger timer
                 fontWeight: "800",
                 color: "white",
                 textShadow: "0 2px 4px rgba(0,0,0,0.5)",
                 fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
               }}
             >
-              {Math.ceil(questionRemainingTime)}
+              {isCountdownVisible && timeDisplayed}
             </span>
           </div>
         </div>
@@ -200,29 +277,39 @@ export const QuizQuestion: React.FC<{
         {/* Question Card */}
         <div
           style={{
-            background: "rgba(255,255,255,0.98)",
-            borderRadius: "24px",
-            padding: "50px 45px",
+            background: "transparent", // No background on the main card
+            borderRadius: "30px",
+            padding: "0", // No padding on the main card
             marginBottom: "30px",
-            width: "96%",
-            maxWidth: "1100px",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
-            border: "1px solid rgba(255,255,255,0.2)",
+            width: "90%",
+            maxWidth: "1000px",
+            boxShadow: "none", // No shadow on the main card
             position: "relative",
+            marginTop: "100px",
           }}
         >
-          <h2
-            style={{
-              fontSize: "44px",
-              fontWeight: "700",
-              color: "#1f2937",
-              textAlign: "center",
-              lineHeight: "1.3",
-              fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-            }}
-          >
-            {question.text}
-          </h2>
+          <div style={{ textAlign: "center" }}>
+            {question.text.split("\n").map((line, i) => (
+              <span
+                key={i}
+                style={{
+                  background: "#fde047",
+                  padding: "10px 20px",
+                  borderRadius: "15px",
+                  fontSize: "66px", // Increased by 50%
+                  fontWeight: "700",
+                  color: "#1f2937",
+                  lineHeight: "1.5",
+                  fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+                  boxDecorationBreak: "clone",
+                  WebkitBoxDecorationBreak: "clone",
+                  display: "inline",
+                }}
+              >
+                {line}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* Options */}
@@ -244,13 +331,13 @@ export const QuizQuestion: React.FC<{
             <div
               key={option.letter}
               style={{
-                background: "#ffffff",
+                background: "#fde047", // Yellow background
                 borderRadius: "20px",
                 padding: "30px 35px",
-                border: "3px solid #e2e8f0",
                 boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                 transform: `translateX(${getOptionEntrance(index)}px)`,
                 opacity: getOptionOpacity(index),
+                border: "4px solid #1f2937", // Black border
               }}
             >
               <div
@@ -262,28 +349,20 @@ export const QuizQuestion: React.FC<{
               >
                 <span
                   style={{
-                    background: "#1e40af",
-                    color: "white",
-                    width: "60px",
-                    height: "60px",
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: "25px",
-                    fontSize: "28px",
+                    color: "#1f2937", // Dark text
+                    fontSize: "48px", // Increased by 50%
                     fontWeight: "bold",
-                    flexShrink: 0,
+                    marginRight: "20px",
                   }}
                 >
-                  {option.letter}
+                  {String.fromCharCode(97 + index)})
                 </span>
                 <span
                   style={{
                     flex: 1,
-                    fontSize: "28px",
+                    fontSize: "42px", // Increased by 50%
                     fontWeight: "500",
-                    color: "#374151",
+                    color: "#1f2937", // Dark text
                     fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
                   }}
                 >
@@ -293,50 +372,114 @@ export const QuizQuestion: React.FC<{
             </div>
           ))}
         </div>
+
+        {/* Like Button Section */}
+        {shouldShowLikeButton && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: "80px",
+              opacity: spring({
+                frame: frame - likeButtonStartFrame,
+                fps,
+                config: { damping: 200, stiffness: 100 },
+                from: 0,
+                to: 1,
+              }),
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "25px",
+                transform: `translateY(${Math.sin((frame - likeButtonStartFrame) / 8) * 3}px)`,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "48px",
+                  fontWeight: "700",
+                  background: "linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57)",
+                  backgroundSize: "300% 300%",
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+                  textShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
+                  filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))",
+                  animation: "gradientShift 3s ease-in-out infinite",
+                }}
+              >
+                Hit like button if you found the answer
+              </span>
+              <div
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  background: "linear-gradient(45deg, #ff6b6b, #4ecdc4)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: `scale(${1 + Math.sin((frame - likeButtonStartFrame) / 4) * 0.15}) rotate(${Math.sin((frame - likeButtonStartFrame) / 6) * 5}deg)`,
+                  boxShadow: "0 0 20px rgba(255, 107, 107, 0.4), 0 0 40px rgba(78, 205, 196, 0.3)",
+                  filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "28px",
+                    filter: "drop-shadow(0 0 5px rgba(255, 255, 255, 0.8))",
+                  }}
+                >
+                  👍
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* --- Answer Phase Elements --- */}
-      <div
-        style={{
-          opacity: answerElementsOpacity,
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "flex-start",
-          padding: "90px 40px 60px 40px",
-          position: "absolute",
-          top: 0,
-          left: 0,
-        }}
-      >
+      <div style={{ opacity: answerElementsOpacity, width: "100%", height: '100%', position: 'absolute', top: 0, left: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '90px 40px 60px 40px' }}>
         {/* Answer Title */}
         <div
           style={{
-            background: "rgba(255,255,255,0.98)",
-            borderRadius: "24px",
-            padding: "40px 45px",
+            background: "transparent",
+            padding: "0",
             marginBottom: "30px",
-            width: "96%",
-            maxWidth: "1100px",
-            boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+            width: "90%",
+            maxWidth: "1000px",
+            boxShadow: "none",
+            position: "relative",
+            marginTop: "100px",
           }}
         >
-          <h3
-            style={{
-              fontSize: "42px",
-              fontWeight: "700",
-              color: "#1f2937",
-              textAlign: "center",
-              fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-            }}
-          >
-            Answer
-          </h3>
+          <div style={{ textAlign: "center" }}>
+            <span
+              style={{
+                background: "#fde047",
+                padding: "10px 20px",
+                borderRadius: "15px",
+                fontSize: "63px",
+                fontWeight: "700",
+                color: "#1f2937",
+                lineHeight: "1.5",
+                fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+                boxDecorationBreak: "clone",
+                WebkitBoxDecorationBreak: "clone",
+                display: "inline",
+              }}
+            >
+              Correct Answer
+            </span>
+          </div>
         </div>
 
-        {/* Options with correct/incorrect indication */}
+        {/* Correct Answer Only */}
         <div
           style={{
             display: "flex",
@@ -347,26 +490,22 @@ export const QuizQuestion: React.FC<{
             maxWidth: "1100px",
           }}
         >
-          {[
-            { letter: "A", text: question.optionA },
-            { letter: "B", text: question.optionB },
-            { letter: "C", text: question.optionC },
-            { letter: "D", text: question.optionD },
-          ].map((option) => {
-            const isCorrect = option.letter === question.correctAnswer
+          {(() => {
+            const correctOption = [
+              { letter: "A", text: question.optionA },
+              { letter: "B", text: question.optionB },
+              { letter: "C", text: question.optionC },
+              { letter: "D", text: question.optionD },
+            ].find(option => option.letter === question.correctAnswer)
+            
             return (
               <div
-                key={option.letter}
                 style={{
-                  background: isCorrect ? "#dcfce7" : "#fef2f2",
+                  background: "#fde047",
                   borderRadius: "20px",
                   padding: "30px 35px",
-                  border: `4px solid ${isCorrect ? "#16a34a" : "#dc2626"}`,
-                  boxShadow: `0 8px 20px ${
-                    isCorrect
-                      ? "rgba(22, 163, 74, 0.3)"
-                      : "rgba(220, 38, 38, 0.3)"
-                  }`,
+                  border: `4px solid #1f2937`,
+                  boxShadow: `0 8px 20px rgba(0,0,0,0.1)`,
                 }}
               >
                 <div
@@ -374,89 +513,186 @@ export const QuizQuestion: React.FC<{
                 >
                   <span
                     style={{
-                      background: isCorrect ? "#16a34a" : "#dc2626",
+                      background: "#16a34a",
                       color: "white",
-                      width: "60px",
-                      height: "60px",
+                      width: "80px",
+                      height: "80px",
                       borderRadius: "50%",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       marginRight: "25px",
-                      fontSize: "28px",
+                      fontSize: "36px",
                       fontWeight: "bold",
                       flexShrink: 0,
                     }}
                   >
-                    {option.letter}
+                    {correctOption?.letter}
                   </span>
                   <span
                     style={{
                       flex: 1,
-                      fontSize: "28px",
+                      fontSize: "48px",
                       fontWeight: "500",
-                      color: "#374151",
+                      color: "#111827",
                       fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
                     }}
                   >
-                    {option.text}
+                    {correctOption?.text}
                   </span>
-                  {isCorrect ? (
-                    <span style={{ color: "#16a34a", fontSize: "36px" }}>✓</span>
-                  ) : (
-                    <span style={{ color: "#dc2626", fontSize: "32px" }}>✗</span>
-                  )}
+                  <span style={{ color: "#16a34a", fontSize: "48px" }}>✓</span>
                 </div>
               </div>
             )
-          })}
+          })()}
         </div>
         
-        {/* Explanation Card */}
-        <div style={{
-          background: "rgba(255,255,255,0.98)",
-          borderRadius: "24px",
-          padding: "45px 50px",
-          width: "96%",
-          maxWidth: "1100px",
-          boxShadow: "0 15px 40px rgba(0,0,0,0.3)",
-        }}>
-          <h4 style={{
-            fontSize: "32px",
-            fontWeight: "bold",
-            color: "#0ea5e9",
-            marginBottom: "20px",
-            fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+        {/* Explanation Card - appears 2 seconds after answer phase starts */}
+        {shouldShowExplanation && (
+          <div style={{
+            background: "#fde047",
+            borderRadius: "20px",
+            padding: "45px 50px",
+            width: "90%",
+            maxWidth: "1000px",
+            boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
+            border: '4px solid #1f2937',
+            opacity: spring({
+              frame: frame - explanationStartFrame,
+              fps,
+              config: { damping: 200, stiffness: 100 },
+              from: 0,
+              to: 1,
+            }),
+            transform: `translateY(${spring({
+              frame: frame - explanationStartFrame,
+              fps,
+              config: { damping: 200, stiffness: 100 },
+              from: 50,
+              to: 0,
+            })}px)`,
           }}>
-            Explanation
-          </h4>
-          <p style={{
-            fontSize: "26px",
-            color: "#374151",
-            lineHeight: "1.4",
-            fontWeight: "500",
-            fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-          }}>
-            {question.explanation}
-          </p>
-        </div>
+            <h4 style={{
+              fontSize: "48px",
+              fontWeight: "bold",
+              color: "#1f2937",
+              marginBottom: "20px",
+              fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+            }}>
+              Explanation
+            </h4>
+            <p style={{
+              fontSize: "45px",
+              color: "#1f2937",
+              lineHeight: "1.4",
+              fontWeight: "500",
+              fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+            }}>
+              {question.explanation}
+            </p>
+          </div>
+        )}
+
+        {/* Subscribe Button Section - appears after explanation card */}
+        {shouldShowSubscribe && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              marginTop: "40px",
+              opacity: spring({
+                frame: frame - subscribeStartFrame,
+                fps,
+                config: { damping: 200, stiffness: 100 },
+                from: 0,
+                to: 1,
+              }),
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "25px",
+                transform: `translateY(${Math.sin((frame - subscribeStartFrame) / 8) * 3}px)`,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "48px",
+                  fontWeight: "700",
+                  background: "linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57)",
+                  backgroundSize: "300% 300%",
+                  backgroundClip: "text",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent",
+                  fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
+                  textShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
+                  filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))",
+                  animation: "gradientShift 3s ease-in-out infinite",
+                }}
+              >
+                Hit Subscribe if you liked the question
+              </span>
+              <div
+                style={{
+                  width: "60px",
+                  height: "60px",
+                  background: "linear-gradient(45deg, #ff6b6b, #4ecdc4)",
+                  borderRadius: "50%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  transform: `scale(${1 + Math.sin((frame - subscribeStartFrame) / 4) * 0.15}) rotate(${Math.sin((frame - subscribeStartFrame) / 6) * 5}deg)`,
+                  boxShadow: "0 0 20px rgba(255, 107, 107, 0.4), 0 0 40px rgba(78, 205, 196, 0.3)",
+                  filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.5))",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "28px",
+                    filter: "drop-shadow(0 0 5px rgba(255, 255, 255, 0.8))",
+                  }}
+                >
+                  🔔
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* --- Shared Elements (Audio & Confetti) --- */}
       {shouldPlayTimerAudio && (
-        <Audio
-          src={staticFile("audio/timer-with-chime.mp3")}
-          startFrom={0}
-          volume={0.4}
-        />
+        <>
+          {/* Timer audio: Loop timer.mp3 (10s) 3 times during 30s countdown */}
+          <Audio
+            src={staticFile("audio/timer.mp3")}
+            startFrom={0}
+            volume={0.4}
+            loop={true}
+          />
+        </>
       )}
-      {shouldPlayCelebration && (
+      
+      {/* Chime audio: Play for 1 second at transition */}
+      <Sequence from={chimeStartFrame} durationInFrames={fps}>
+        <Audio
+          src={staticFile("audio/chime.mp3")}
+          startFrom={0}
+          volume={0.8}
+        />
+      </Sequence>
+      
+      {/* Celebration audio: Play for 1 second after chime */}
+      <Sequence from={celebrationStartFrame} durationInFrames={fps}>
         <Audio
           src={staticFile("audio/celebration.mp3")}
           startFrom={0}
-          volume={0.7}
+          volume={0.9}
         />
-      )}
+      </Sequence>
       {isAnswerPhase &&
         confettiParticles.map((particle, index) => (
           <div
