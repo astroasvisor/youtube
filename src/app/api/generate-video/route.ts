@@ -101,7 +101,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function generateVideoWithRemotion(video: any, questions: any[]) {
+export async function generateVideoWithRemotion(video: any, questions: any[]) {
   try {
     // Create temporary directory for video generation
     const tempDir = path.join(process.cwd(), "temp", video.id)
@@ -117,7 +117,7 @@ async function generateVideoWithRemotion(video: any, questions: any[]) {
       optionD: q.optionD,
       correctAnswer: q.correctAnswer as "A" | "B" | "C" | "D",
       explanation: q.explanation,
-    }))
+    } as const))
 
     // Create a temporary Remotion entry file
     const entryFileContent = `

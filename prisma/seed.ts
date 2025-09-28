@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client'
+import { hash } from 'bcryptjs'
 
 const prisma = new PrismaClient()
 
@@ -475,11 +476,29 @@ async function main() {
 
   console.log('✅ Class 12 subjects and topics created')
 
+  // Create demo user with hashed password
+  console.log('👤 Creating demo user...')
+  const hashedPassword = await hash('admin123', 12)
+  
+  const demoUser = await prisma.user.upsert({
+    where: { email: 'admin@example.com' },
+    update: {},
+    create: {
+      email: 'admin@example.com',
+      name: 'Admin User',
+      password: hashedPassword,
+      role: 'ADMIN',
+    },
+  })
+
+  console.log('✅ Demo user created')
+
   console.log('🎉 Database seeding completed successfully!')
   console.log('📊 Summary:')
   console.log('   • 4 Classes created')
   console.log('   • 16 Subjects created')
   console.log('   • 200+ Topics created')
+  console.log('   • 1 Demo user created (admin@example.com / admin123)')
 }
 
 async function createTopics(subjectId: string, topicNames: string[]) {

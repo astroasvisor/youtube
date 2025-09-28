@@ -1,7 +1,7 @@
 "use client"
 
 import { useSession, signOut } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useEffect } from "react"
 import Link from "next/link"
 
@@ -12,6 +12,19 @@ export default function DashboardLayout({
 }) {
   const { data: session, status } = useSession()
   const router = useRouter()
+  const pathname = usePathname()
+
+  // Function to determine if a link is active
+  const getLinkClasses = (href: string) => {
+    const isActive = pathname === href ||
+      (href !== '/dashboard' && pathname.startsWith(href))
+
+    return `inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium ${
+      isActive
+        ? 'border-indigo-500 text-gray-900'
+        : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+    }`
+  }
 
   useEffect(() => {
     if (status === "loading") return // Still loading
@@ -45,27 +58,33 @@ export default function DashboardLayout({
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
                 <Link
                   href="/dashboard"
-                  className="border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={getLinkClasses("/dashboard")}
                 >
                   Dashboard
                 </Link>
                 <Link
                   href="/dashboard/classes"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={getLinkClasses("/dashboard/classes")}
                 >
                   Classes
                 </Link>
                 <Link
                   href="/dashboard/questions"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={getLinkClasses("/dashboard/questions")}
                 >
                   Questions
                 </Link>
                 <Link
                   href="/dashboard/videos"
-                  className="border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
+                  className={getLinkClasses("/dashboard/videos")}
                 >
                   Videos
+                </Link>
+                <Link
+                  href="/dashboard/auto-post"
+                  className={getLinkClasses("/dashboard/auto-post")}
+                >
+                  Auto-Post
                 </Link>
               </div>
             </div>

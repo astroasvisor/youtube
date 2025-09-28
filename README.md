@@ -263,14 +263,92 @@ npm run lint
 2. Set up production environment variables
 3. Deploy to your hosting platform
 
-## YouTube API Setup
+## YouTube API Setup (Required for Auto-Posting)
+
+**⚠️ IMPORTANT**: The auto-posting feature requires YouTube API authentication. Without proper setup, videos will be generated but cannot be uploaded to YouTube.
+
+### Step 1: Google Cloud Console Setup
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable YouTube Data API v3
-4. Create OAuth 2.0 credentials
-5. Set authorized redirect URIs
-6. Generate refresh token using OAuth playground
+2. **Create a new project** or select an existing one
+3. **Enable APIs**:
+   - Search for "YouTube Data API v3"
+   - Click "Enable"
+4. **Create OAuth 2.0 credentials**:
+   - Go to "Credentials" → "Create Credentials" → "OAuth 2.0 Client IDs"
+   - Choose "Web application"
+   - Add authorized redirect URIs:
+     - For development: `http://localhost:3000/api/auth/callback/google`
+     - For production: `https://yourdomain.com/api/auth/callback/google`
+
+### Step 2: Get OAuth Credentials
+
+After creating the OAuth client, you'll get:
+- **Client ID**
+- **Client Secret**
+
+### Step 3: Environment Variables Setup
+
+Create a `.env` file in the project root:
+
+```env
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/quiz_generator"
+
+# NextAuth
+NEXTAUTH_SECRET="your-secret-key-here"
+NEXTAUTH_URL="http://localhost:3000"
+
+# OpenAI API
+OPENAI_API_KEY="your-openai-api-key"
+
+# Google OAuth (Required for YouTube)
+GOOGLE_CLIENT_ID="your-google-oauth-client-id"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+```
+
+### Step 4: Authentication Flow
+
+1. **Sign in with Google**: Use the "Sign in with Google" button on the signin page
+2. **Grant permissions**: Allow access to your YouTube account
+3. **Automatic token management**: NextAuth handles token refresh automatically
+4. **Auto-posting ready**: Your session now has YouTube upload permissions
+
+### Alternative: Manual Token Setup (Advanced)
+
+If you prefer manual token management:
+
+1. Use [Google OAuth 2.0 Playground](https://developers.google.com/oauthplayground)
+2. Select scopes: `https://www.googleapis.com/auth/youtube.upload`
+3. Exchange authorization code for refresh token
+4. Add to `.env`:
+   ```env
+   YOUTUBE_REFRESH_TOKEN="your-refresh-token"
+   ```
+
+### Troubleshooting
+
+**"Authentication required" error**:
+- Ensure you're signed in with Google (not just credentials)
+- Check that you've granted YouTube upload permissions
+- Verify environment variables are set correctly
+
+**"No YouTube authentication credentials provided"**:
+- Make sure you're using Google OAuth (not manual tokens)
+- Check that Google OAuth is properly configured in NextAuth
+- Verify the redirect URI matches your setup
+
+**Token expired**:
+- NextAuth automatically refreshes tokens
+- If issues persist, re-authenticate with Google
+
+### Required Permissions
+
+The application needs these Google OAuth scopes:
+- `openid` - Basic profile information
+- `email` - Email address
+- `profile` - Profile information
+- `https://www.googleapis.com/auth/youtube.upload` - Upload videos to YouTube
 
 ## Contributing
 

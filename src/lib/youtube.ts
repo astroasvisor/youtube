@@ -2,23 +2,39 @@ import { google } from "googleapis"
 import fs from "fs"
 import path from "path"
 
-const oauth2Client = new google.auth.OAuth2(
-  process.env.YOUTUBE_CLIENT_ID,
-  process.env.YOUTUBE_CLIENT_SECRET,
-  "http://localhost:3000/auth/youtube/callback" // Adjust based on your setup
-)
+// Create OAuth2 client factory function
+function createOAuth2Client() {
+  return new google.auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID || process.env.YOUTUBE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET || process.env.YOUTUBE_CLIENT_SECRET,
+    `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/callback/google`
+  )
+}
 
 export async function uploadToYouTube(
   videoPath: string,
   title: string,
   description: string,
-  tags: string[] = []
+  tags: string[] = [],
+  accessToken?: string,
+  refreshToken?: string
 ) {
   try {
-    // Set up authentication using refresh token
-    oauth2Client.setCredentials({
-      refresh_token: process.env.YOUTUBE_REFRESH_TOKEN,
-    })
+    const oauth2Client = createOAuth2Client()
+
+    // Set up authentication using provided tokens or environment variables
+    if (accessToken && refreshToken) {
+      oauth2Client.setCredentials({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      })
+    } else if (process.env.YOUTUBE_REFRESH_TOKEN) {
+      oauth2Client.setCredentials({
+        refresh_token: process.env.YOUTUBE_REFRESH_TOKEN,
+      })
+    } else {
+      throw new Error("No YouTube authentication credentials provided")
+    }
 
     const youtube = google.youtube({
       version: "v3",

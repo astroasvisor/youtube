@@ -1,6 +1,29 @@
 import React from "react"
 import { useCurrentFrame, useVideoConfig, spring, Audio, staticFile, Sequence } from "remotion"
 
+// Character entrance animation - appears after last option
+const getCharacterOpacity = (frame: number, fps: number) => {
+  const startFrame = 60 // Start appearing 5 frames after last option (frame 55)
+  return spring({
+    frame: frame - startFrame,
+    fps,
+    config: { damping: 200, stiffness: 100 },
+    from: 0,
+    to: 1,
+  })
+}
+
+const getCharacterTranslateY = (frame: number, fps: number) => {
+  const startFrame = 60 // Start appearing 5 frames after last option (frame 55)
+  return spring({
+    frame: frame - startFrame,
+    fps,
+    config: { damping: 200, stiffness: 100 },
+    from: 100,
+    to: 0,
+  })
+}
+
 /*
 🎵 AUDIO FILES CONFIGURED:
 Your audio files are set up and ready to use:
@@ -35,6 +58,14 @@ export const QuizQuestion: React.FC<{
 }> = ({ question }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
+
+  const fadeInOpacity = spring({
+    frame,
+    fps,
+    from: 0,
+    to: 1,
+    durationInFrames: 15
+  });
 
   // 50 second total duration: 35s question + 15s answer reveal
   const questionPhaseFrames = 35 * fps
@@ -175,7 +206,7 @@ export const QuizQuestion: React.FC<{
   
   // Audio timing frames
   const chimeStartFrame = questionPhaseFrames
-  const celebrationStartFrame = chimeStartFrame + fps
+  const celebrationStartFrame = chimeStartFrame + (1.5 * fps)
 
   // Like button timing (appears at 15s and shows for rest of question phase)
   const likeButtonStartFrame = 15 * fps
@@ -203,6 +234,7 @@ export const QuizQuestion: React.FC<{
         width: "100%",
         height: "100%",
         position: "relative",
+        opacity: fadeInOpacity,
       }}
     >
       <style>
@@ -670,7 +702,7 @@ export const QuizQuestion: React.FC<{
           <Audio
             src={staticFile("audio/timer.mp3")}
             startFrom={0}
-            volume={0.4}
+            volume={0.6}
             loop={true}
           />
         </>
@@ -681,7 +713,7 @@ export const QuizQuestion: React.FC<{
         <Audio
           src={staticFile("audio/chime.mp3")}
           startFrom={0}
-          volume={0.8}
+          volume={0.5}
         />
       </Sequence>
       
@@ -690,9 +722,30 @@ export const QuizQuestion: React.FC<{
         <Audio
           src={staticFile("audio/celebration.mp3")}
           startFrom={0}
-          volume={0.9}
+          volume={1.0}
         />
       </Sequence>
+      {/* Thinking Character - appears during question phase */}
+      <div
+        style={{
+          position: "absolute",
+          bottom: -110,
+          left: "50%",
+          transform: `translateX(-50%) translateY(${getCharacterTranslateY(frame, fps)}px)`,
+          opacity: getCharacterOpacity(frame, fps),
+          zIndex: 5,
+        }}
+      >
+        <img
+          src={staticFile("images/thinking.png")}
+          alt="Thinking character"
+          style={{
+            width: "720px",
+            height: "720px",
+          }}
+        />
+      </div>
+
       {isAnswerPhase &&
         confettiParticles.map((particle, index) => (
           <div

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,22 +7,21 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// NextAuth.js Models
 model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                       String  @id @default(cuid())
+  userId                   String
+  type                     String
+  provider                 String
+  providerAccountId        String
+  refresh_token            String?
+  access_token             String?
+  expires_at               Int?
+  token_type               String?
+  scope                    String?
+  id_token                 String?
+  session_state            String?
+  refresh_token_expires_in Int?
+  user                     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -44,11 +40,12 @@ model User {
   email         String    @unique
   emailVerified DateTime?
   image         String?
+  password      String?
   role          Role      @default(ADMIN)
-  accounts      Account[]
-  sessions      Session[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
 }
 
 model VerificationToken {
@@ -59,59 +56,58 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
-// Application Models
 model Class {
   id          String    @id @default(cuid())
-  name        String    @unique // "Class 9", "Class 10", "Class 11", "Class 12"
+  name        String    @unique
   description String?
-  subjects    Subject[]
-  videos      Video[]
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  subjects    Subject[]
+  videos      Video[]
 }
 
 model Subject {
-  id       String   @id @default(cuid())
-  name     String   // "Physics", "Chemistry", "Mathematics", "Biology"
-  classId  String
-  class    Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
-  topics   Topic[]
-  videos   Video[]
+  id        String   @id @default(cuid())
+  name      String
+  classId   String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  topics    Topic[]
+  videos    Video[]
 
   @@unique([name, classId])
 }
 
 model Topic {
   id        String     @id @default(cuid())
-  name      String     // "Motion", "Chemical Bonding", "Calculus", etc.
+  name      String
   subjectId String
-  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
-  questions Question[]
-  videos    Video[]
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
+  questions Question[]
+  subject   Subject    @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  videos    Video[]
 
   @@unique([name, subjectId])
 }
 
 model Question {
-  id              String          @id @default(cuid())
-  text            String
-  optionA         String
-  optionB         String
-  optionC         String
-  optionD         String
-  correctAnswer   String          // "A", "B", "C", or "D"
-  explanation     String
-  difficulty      Difficulty      @default(MEDIUM)
-  status          QuestionStatus  @default(APPROVED)
-  topicId         String
-  topic           Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  usages          QuestionUsage[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  id            String          @id @default(cuid())
+  text          String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctAnswer String
+  explanation   String
+  difficulty    Difficulty      @default(MEDIUM)
+  status        QuestionStatus  @default(APPROVED)
+  topicId       String
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  topic         Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  usages        QuestionUsage[]
 
   @@unique([text, topicId])
 }
@@ -119,33 +115,45 @@ model Question {
 model QuestionUsage {
   id         String   @id @default(cuid())
   questionId String
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
   videoId    String
-  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
   usedAt     DateTime @default(now())
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
   @@unique([questionId, videoId])
 }
 
 model Video {
-  id          String        @id @default(cuid())
+  id          String          @id @default(cuid())
   title       String
   description String?
-  filename    String        @unique
-  status      VideoStatus   @default(DRAFT)
-  youtubeId   String?       // YouTube video ID after upload
+  filename    String          @unique
+  status      VideoStatus     @default(DRAFT)
+  youtubeId   String?
   classId     String
-  class       Class         @relation(fields: [classId], references: [id])
   subjectId   String
-  subject     Subject       @relation(fields: [subjectId], references: [id])
   topicId     String
-  topic       Topic         @relation(fields: [topicId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
   questions   QuestionUsage[]
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  topicUsage  TopicUsage?
+  class       Class           @relation(fields: [classId], references: [id])
+  subject     Subject         @relation(fields: [subjectId], references: [id])
+  topic       Topic           @relation(fields: [topicId], references: [id])
 }
 
-// Enums
+model TopicUsage {
+  id        String   @id @default(cuid())
+  classId   String
+  subjectId String
+  topicId   String
+  usedAt    DateTime @default(now())
+  videoId   String?  @unique
+  video     Video?   @relation(fields: [videoId], references: [id])
+
+  @@unique([classId, subjectId, topicId, usedAt])
+}
+
 enum Role {
   ADMIN
   USER

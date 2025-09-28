@@ -10,6 +10,8 @@ import {
   Audio,
 } from "remotion"
 import { QuizQuestion } from "./QuizQuestion"
+import { IntroScreen } from "./IntroScreen"
+import { ReadyForTeaser } from "./ReadyForTeaser"
 
 export interface Question {
   id: string
@@ -26,8 +28,9 @@ export const QuizVideo: React.FC<{
   questions: Question[]
   title: string
 }> = ({ questions, title }) => {
-  // 50 seconds per question (35s question + 15s answer)
-  const totalDuration = questions.length * 50
+  // 5 seconds intro + 50 seconds per question (35s question + 15s answer)
+  const introDuration = 6 // 3s intro + 3s teaser
+  const totalDuration = introDuration + (questions.length * 50)
 
   return (
     <Composition
@@ -52,6 +55,8 @@ const QuizVideoComposition: React.FC<{
   const { fps, durationInFrames } = useVideoConfig()
 
   // Calculate timing for the entire video
+  const introDuration = 3 * fps // 3 seconds for intro screen
+  const teaserDuration = 3 * fps // 3 seconds for teaser screen
   const questionDuration = 35 * fps // 35 seconds per question
   const answerDuration = 15 * fps // 15 seconds per answer
   const totalPerQuestion = questionDuration + answerDuration
@@ -65,21 +70,31 @@ const QuizVideoComposition: React.FC<{
         position: "relative",
       }}
     >
-      {/* Continuous background music */}
-      <Sequence from={0} durationInFrames={durationInFrames}>
+      {/* Background music - starts at t=3s (at teaser screen onset) */}
+      <Sequence from={3 * fps} durationInFrames={durationInFrames - (3 * fps)}>
         <Audio
           src={staticFile("audio/background-music.mp3")}
           startFrom={0}
-          volume={0.1}
+          volume={0.08}
           loop={true}
         />
       </Sequence>
 
-      {/* Sequence for each question */}
+      {/* Intro Screen - 3 seconds */}
+      <Sequence from={0} durationInFrames={introDuration}>
+        <IntroScreen />
+      </Sequence>
+
+      {/* Teaser Screen - 2 seconds */}
+      <Sequence from={introDuration} durationInFrames={teaserDuration}>
+        <ReadyForTeaser />
+      </Sequence>
+
+      {/* Sequence for each question - starts after 5 second intro */}
       {questions.map((question, index) => (
         <Sequence
           key={question.id}
-          from={index * totalPerQuestion}
+          from={(6 * fps) + (index * totalPerQuestion)}
           durationInFrames={totalPerQuestion}
         >
           <QuizQuestion question={question} />
