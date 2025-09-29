@@ -1,10 +1,72 @@
 "use client"
 
-import { useSession } from "next-auth/react"
 import Link from "next/link"
+import { useState, useEffect } from "react"
+
+interface DashboardStats {
+  totalClasses: number
+  totalQuestions: number
+  totalVideos: number
+  uploadedVideos: number
+}
+
+interface Activity {
+  id: string
+  activity: string
+  timestamp: string
+  type: string
+}
 
 export default function Dashboard() {
-  const { data: session } = useSession()
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [activities, setActivities] = useState<Activity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Fetch stats and activities in parallel
+        const [statsResponse, activitiesResponse] = await Promise.all([
+          fetch('/api/dashboard-stats'),
+          fetch('/api/recent-activity')
+        ])
+
+        if (!statsResponse.ok || !activitiesResponse.ok) {
+          throw new Error('Failed to fetch dashboard data')
+        }
+
+        const statsData = await statsResponse.json()
+        const activitiesData = await activitiesResponse.json()
+
+        setStats(statsData)
+        setActivities(activitiesData)
+      } catch (err) {
+        setError('Failed to load dashboard data')
+        console.error('Error fetching dashboard data:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [])
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date()
+    const time = new Date(timestamp)
+    const diffInSeconds = Math.floor((now.getTime() - time.getTime()) / 1000)
+
+    if (diffInSeconds < 60) return 'Just now'
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+    if (diffInSeconds < 2592000) return `${Math.floor(diffInSeconds / 86400)} days ago`
+
+    return time.toLocaleDateString()
+  }
 
   return (
     <div className="space-y-6">
@@ -33,7 +95,11 @@ export default function Dashboard() {
                     Total Classes
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    4
+                    {loading ? (
+                      <div className="animate-pulse bg-gray-200 h-6 w-8 rounded"></div>
+                    ) : (
+                      stats?.totalClasses ?? 0
+                    )}
                   </dd>
                 </dl>
               </div>
@@ -55,7 +121,11 @@ export default function Dashboard() {
                     Total Questions
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    156
+                    {loading ? (
+                      <div className="animate-pulse bg-gray-200 h-6 w-12 rounded"></div>
+                    ) : (
+                      stats?.totalQuestions ?? 0
+                    )}
                   </dd>
                 </dl>
               </div>
@@ -77,7 +147,11 @@ export default function Dashboard() {
                     Videos Generated
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    23
+                    {loading ? (
+                      <div className="animate-pulse bg-gray-200 h-6 w-8 rounded"></div>
+                    ) : (
+                      stats?.totalVideos ?? 0
+                    )}
                   </dd>
                 </dl>
               </div>
@@ -99,7 +173,11 @@ export default function Dashboard() {
                     Videos Uploaded
                   </dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    18
+                    {loading ? (
+                      <div className="animate-pulse bg-gray-200 h-6 w-8 rounded"></div>
+                    ) : (
+                      stats?.uploadedVideos ?? 0
+                    )}
                   </dd>
                 </dl>
               </div>
@@ -143,26 +221,42 @@ export default function Dashboard() {
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
             Recent Activity
           </h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between py-2 border-b border-gray-200">
-              <div className="text-sm text-gray-900">
-                Generated quiz video for Class 11 Physics - Motion
-              </div>
-              <div className="text-sm text-gray-500">2 hours ago</div>
+          {loading ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center justify-between py-2">
+                  <div className="animate-pulse bg-gray-200 h-4 flex-1 rounded"></div>
+                  <div className="animate-pulse bg-gray-200 h-4 w-20 ml-4 rounded"></div>
+                </div>
+              ))}
             </div>
-            <div className="flex items-center justify-between py-2 border-b border-gray-200">
-              <div className="text-sm text-gray-900">
-                Added 5 new questions for Class 12 Chemistry
-              </div>
-              <div className="text-sm text-gray-500">1 day ago</div>
+          ) : error ? (
+            <div className="text-center py-4">
+              <p className="text-red-600">{error}</p>
             </div>
-            <div className="flex items-center justify-between py-2">
-              <div className="text-sm text-gray-900">
-                Uploaded quiz video to YouTube
-              </div>
-              <div className="text-sm text-gray-500">2 days ago</div>
+          ) : activities.length === 0 ? (
+            <div className="text-center py-4">
+              <p className="text-gray-500">No recent activity</p>
             </div>
-          </div>
+          ) : (
+            <div className="space-y-3">
+              {activities.map((activity, index) => (
+                <div
+                  key={activity.id}
+                  className={`flex items-center justify-between py-2 ${
+                    index < activities.length - 1 ? 'border-b border-gray-200' : ''
+                  }`}
+                >
+                  <div className="text-sm text-gray-900">
+                    {activity.activity}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {formatTimeAgo(activity.timestamp)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

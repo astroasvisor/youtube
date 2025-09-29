@@ -1,205 +1,69 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 
-// GET /api/questions/[id] - Get a single question by ID
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  try {
-    const question = await prisma.question.findUnique({
-      where: { id },
-      include: {
-        topic: {
-          include: {
-            subject: {
-              include: {
-                class: true,
-              },
-            },
-          },
-        },
-      },
-    })
-
-    if (!question) {
-      return NextResponse.json(
-        { error: "Question not found" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json(question)
-  } catch (error) {
-    console.error("Error fetching question:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch question" },
-      { status: 500 }
-    )
-  }
-}
-
-// PUT /api/questions/[id] - Update a question
-export async function PUT(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params
-  try {
-    const {
-      classId,
-      subjectId,
-      topicId,
-      text,
-      optionA,
-      optionB,
-      optionC,
-      optionD,
-      correctAnswer,
-      explanation,
-      difficulty,
-      status
-    } = await request.json()
-
-    // Validate required fields
-    if (!classId || !subjectId || !topicId) {
-      return NextResponse.json(
-        { error: "Class ID, Subject ID, and Topic ID are required" },
-        { status: 400 }
-      )
-    }
-
-    if (!text || !optionA || !optionB || !optionC || !optionD || !explanation) {
-      return NextResponse.json(
-        { error: "Question text, all options, and explanation are required" },
-        { status: 400 }
-      )
-    }
-
-    if (!["A", "B", "C", "D"].includes(correctAnswer)) {
-      return NextResponse.json(
-        { error: "Correct answer must be A, B, C, or D" },
-        { status: 400 }
-      )
-    }
-
-    // Verify that the class, subject, and topic exist and are related
-    const topic = await prisma.topic.findUnique({
-      where: { id: topicId },
-      include: {
-        subject: {
-          include: {
-            class: true,
-          },
-        },
-      },
-    })
-
-    if (!topic) {
-      return NextResponse.json(
-        { error: "Topic not found" },
-        { status: 404 }
-      )
-    }
-
-    if (topic.subject.id !== subjectId || topic.subject.class.id !== classId) {
-      return NextResponse.json(
-        { error: "Class, Subject, and Topic IDs do not match" },
-        { status: 400 }
-      )
-    }
-
-    // Check if another question with the same text exists for this topic (excluding current question)
-    const existingQuestion = await prisma.question.findFirst({
-      where: {
-        text,
-        topicId,
-        id: { not: id },
-      },
-    })
-
-    if (existingQuestion) {
-      return NextResponse.json(
-        { error: "Another question with the same text already exists for this topic" },
-        { status: 409 }
-      )
-    }
-
-    // Update the question
-    const question = await prisma.question.update({
-      where: { id },
-      data: {
-        text,
-        optionA,
-        optionB,
-        optionC,
-        optionD,
-        correctAnswer,
-        explanation,
-        difficulty: difficulty as any,
-        status: status as any,
-        topicId,
-      },
-      include: {
-        topic: {
-          include: {
-            subject: {
-              include: {
-                class: true,
-              },
-            },
-          },
-        },
-      },
-    })
-
-    return NextResponse.json(question)
-  } catch (error) {
-    console.error("Error updating question:", error)
-    return NextResponse.json(
-      { error: "Failed to update question" },
-      { status: 500 }
-    )
-  }
-}
-
-// DELETE /api/questions/[id] - Delete a question
+// DELETE /api/questions/[id] - Delete a question and its related data
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const { id } = await params
   try {
-    // Check if question exists
-    const question = await prisma.question.findUnique({
-      where: { id },
+    const { id: questionId } = await params
+
+    if (!questionId) {
+      return NextResponse.json(
+        { error: "Question ID is required" },
+        { status: 400 }
+      )
+    }
+
+    // Check if the question exists
+    const existingQuestion = await prisma.question.findUnique({
+      where: { id: questionId },
       include: {
-        usages: true,
-      },
+        usages: {
+          include: {
+            video: true
+          }
+        }
+      }
     })
 
-    if (!question) {
+    if (!existingQuestion) {
       return NextResponse.json(
         { error: "Question not found" },
         { status: 404 }
       )
     }
 
-    // Check if question has been used in videos
-    if (question.usages.length > 0) {
+    // Check if question has any videos that are uploaded to YouTube
+    const hasUploadedVideos = existingQuestion.usages.some(usage =>
+      usage.video && usage.video.status === "UPLOADED"
+    )
+
+    if (hasUploadedVideos) {
       return NextResponse.json(
-        { error: "Cannot delete question that has been used in videos" },
+        { error: "Cannot delete question that has uploaded videos. Please delete the videos first." },
         { status: 400 }
       )
     }
 
-    // Delete the question
-    await prisma.question.delete({
-      where: { id },
+    // Delete question usages first (cascade delete will handle this, but let's be explicit)
+    await prisma.questionUsage.deleteMany({
+      where: { questionId }
     })
 
-    return NextResponse.json({ message: "Question deleted successfully" })
+    // Delete the question
+    await prisma.question.delete({
+      where: { id: questionId }
+    })
+
+    return NextResponse.json({
+      message: "Question deleted successfully",
+      deletedQuestion: {
+        id: existingQuestion.id,
+        text: existingQuestion.text
+      }
+    })
   } catch (error) {
     console.error("Error deleting question:", error)
     return NextResponse.json(

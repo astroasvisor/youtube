@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter, useParams } from "next/navigation"
 import { Class, Subject, Topic, Question } from "@prisma/client"
 
@@ -40,12 +40,7 @@ export default function EditQuestionPage() {
     status: "PENDING" as "PENDING" | "APPROVED" | "REJECTED" | "BANNED",
   })
 
-  useEffect(() => {
-    fetchQuestion()
-    fetchClasses()
-  }, [questionId])
-
-  const fetchQuestion = async () => {
+  const fetchQuestion = useCallback(async () => {
     try {
       const response = await fetch(`/api/questions/${questionId}`)
       if (response.ok) {
@@ -75,7 +70,12 @@ export default function EditQuestionPage() {
       router.push("/dashboard/questions")
     }
     setIsLoading(false)
-  }
+  }, [questionId, router])
+
+  useEffect(() => {
+    fetchQuestion()
+    fetchClasses()
+  }, [questionId, fetchQuestion])
 
   const fetchClasses = async () => {
     try {

@@ -1,6 +1,42 @@
 import { google } from "googleapis"
 import fs from "fs"
-import path from "path"
+
+interface ErrorWithResponse {
+  response?: {
+    data?: unknown
+  }
+  message?: string
+}
+
+interface YouTubeRequestBody {
+  snippet: {
+    title: string
+    description: string
+    tags: string[]
+    categoryId: string
+    defaultLanguage?: string
+    defaultAudioLanguage?: string
+  }
+  status: {
+    privacyStatus: string
+    embeddable?: boolean
+    publicStatsViewable?: boolean
+    selfDeclaredMadeForKids?: boolean
+    publishAt?: string
+    license?: string
+    madeForKids?: boolean
+  }
+  recordingDetails?: {
+    recordingDate: string
+    location?: {
+      latitude?: number
+      longitude?: number
+      altitude?: number
+    }
+    locationDescription?: string
+  }
+  [key: string]: unknown
+}
 
 // Create OAuth2 client factory function
 function createOAuth2Client() {
@@ -79,9 +115,9 @@ export async function uploadToYouTube(
         console.log("Token refreshed successfully")
         console.log("New access token length:", credentials.access_token?.length || 0)
         oauth2Client.setCredentials(credentials)
-      } catch (refreshError: any) {
+      } catch (refreshError: unknown) {
         console.error("Failed to refresh access token:", refreshError)
-        console.error("Refresh error details:", refreshError?.response?.data || refreshError?.message || refreshError)
+        console.error("Refresh error details:", (refreshError as ErrorWithResponse)?.response?.data || (refreshError as ErrorWithResponse)?.message || refreshError)
 
         // If refresh fails, try to use the existing token
         console.log("Refresh failed, using existing access token")
@@ -104,10 +140,10 @@ export async function uploadToYouTube(
         console.log("Environment token refreshed successfully")
         console.log("New access token length:", credentials.access_token?.length || 0)
         oauth2Client.setCredentials(credentials)
-      } catch (refreshError: any) {
+      } catch (refreshError: unknown) {
         console.error("Failed to refresh access token from environment:", refreshError)
-        console.error("Refresh error details:", refreshError?.response?.data || refreshError?.message || refreshError)
-        throw new Error(`Failed to refresh YouTube access token: ${refreshError?.message || 'Unknown error'}`)
+        console.error("Refresh error details:", (refreshError as ErrorWithResponse)?.response?.data || (refreshError as ErrorWithResponse)?.message || refreshError)
+        throw new Error(`Failed to refresh YouTube access token: ${(refreshError as ErrorWithResponse)?.message || 'Unknown error'}`)
       }
     } else {
       console.error("No YouTube authentication credentials available")
@@ -137,10 +173,9 @@ export async function uploadToYouTube(
 
     // Create readable stream for video file
     const videoFileStream = fs.createReadStream(videoPath)
-    const fileSize = fs.statSync(videoPath).size
 
     // Build the request body with all available parameters
-    const requestBody: any = {
+    const requestBody: YouTubeRequestBody = {
       snippet: {
         title,
         description,
@@ -180,10 +215,8 @@ export async function uploadToYouTube(
 
     // Add recording details if provided
     if (options.recordingDate || options.location || options.locationDescription) {
-      requestBody.recordingDetails = {}
-
-      if (options.recordingDate) {
-        requestBody.recordingDetails.recordingDate = options.recordingDate.toISOString()
+      requestBody.recordingDetails = {
+        recordingDate: options.recordingDate?.toISOString() || new Date().toISOString()
       }
 
       if (options.location) {

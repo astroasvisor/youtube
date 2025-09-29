@@ -6,7 +6,7 @@ export const IntroScreen: React.FC = () => {
   const { fps } = useVideoConfig()
 
   // 3 second duration for intro screen
-  const duration = 3 * fps
+  // const duration = 3 * fps
 
   // Brain zap animation - only vibration/blinking, no appearing/disappearing
   const blinkSpeed = 8 // Higher = faster blinking

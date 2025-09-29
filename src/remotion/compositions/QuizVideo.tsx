@@ -1,13 +1,10 @@
 import React from "react"
 import {
   Composition,
-  continueRender,
-  delayRender,
   staticFile,
-  useCurrentFrame,
-  useVideoConfig,
   Sequence,
   Audio,
+  useVideoConfig,
 } from "remotion"
 import { QuizQuestion } from "./QuizQuestion"
 import { IntroScreen } from "./IntroScreen"

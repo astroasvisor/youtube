@@ -6,7 +6,7 @@ export const ReadyForTeaser: React.FC = () => {
   const { fps } = useVideoConfig()
 
   // 2 second duration for teaser screen
-  const duration = 2 * fps
+  // const duration = 2 * fps
 
   // Speech bubble entrance animation
   const bubbleOpacity = spring({

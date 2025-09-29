@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Question, Topic, Subject, Class } from "@prisma/client"
-import Link from "next/link"
+import { generateDetailedVideoDescription } from "@/lib/subject-content"
 
 interface QuestionWithTopic extends Question {
   topic: Topic & {
@@ -40,11 +40,47 @@ export default function QuestionsPage() {
     count: 5,
     difficulty: "MEDIUM" as "EASY" | "MEDIUM" | "HARD",
   })
+  const [generatingVideos, setGeneratingVideos] = useState<Set<string>>(new Set())
+  const [videoLogs, setVideoLogs] = useState<Record<string, string[]>>({})
+  const [pollingIntervals, setPollingIntervals] = useState<Record<string, NodeJS.Timeout>>({})
+
+  const fetchQuestions = useCallback(async () => {
+    try {
+      const url = selectedStatus === "ALL"
+        ? "/api/questions"
+        : `/api/questions?status=${selectedStatus}`
+
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        console.log("Fetched questions:", data.length, "questions")
+        // Check if any questions have videos
+        data.forEach((q: QuestionWithTopic) => {
+          if (q.usages && q.usages.length > 0) {
+            console.log(`Question ${q.id} has ${q.usages.length} usages:`, q.usages.map((u) => u.video?.status))
+          }
+        })
+        setQuestions(data)
+      }
+    } catch (error) {
+      console.error("Error fetching questions:", error)
+    }
+    setIsLoading(false)
+  }, [selectedStatus])
 
   useEffect(() => {
     fetchQuestions()
     fetchClasses()
-  }, [selectedStatus])
+  }, [selectedStatus, fetchQuestions])
+
+  // Cleanup polling intervals when component unmounts
+  useEffect(() => {
+    return () => {
+      Object.values(pollingIntervals).forEach(interval => {
+        clearInterval(interval)
+      })
+    }
+  }, [pollingIntervals])
 
   const fetchClasses = async () => {
     try {
@@ -73,23 +109,6 @@ export default function QuestionsPage() {
     return selectedSubject?.topics || []
   }
 
-  const fetchQuestions = async () => {
-    try {
-      const url = selectedStatus === "ALL"
-        ? "/api/questions"
-        : `/api/questions?status=${selectedStatus}`
-
-      const response = await fetch(url)
-      if (response.ok) {
-        const data = await response.json()
-        setQuestions(data)
-      }
-    } catch (error) {
-      console.error("Error fetching questions:", error)
-    }
-    setIsLoading(false)
-  }
-
   const updateQuestionStatus = async (questionId: string, status: QuestionStatus) => {
     try {
       const response = await fetch(`/api/questions/${questionId}`, {
@@ -105,6 +124,30 @@ export default function QuestionsPage() {
       }
     } catch (error) {
       console.error("Error updating question status:", error)
+    }
+  }
+
+  const deleteQuestion = async (questionId: string, questionText: string) => {
+    if (!confirm(`Are you sure you want to delete this question?\n\n"${questionText}"\n\nThis action cannot be undone.`)) {
+      return
+    }
+
+    try {
+      const response = await fetch(`/api/questions/${questionId}`, {
+        method: "DELETE",
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        alert(result.message)
+        fetchQuestions()
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error("Error deleting question:", error)
+      alert("Failed to delete question")
     }
   }
 
@@ -175,9 +218,192 @@ export default function QuestionsPage() {
   }
 
   const hasExistingVideo = (question: QuestionWithTopic) => {
-    return question.usages.some(usage =>
-      usage.video && usage.video.status === "UPLOADED"
+    // Check if question has any videos that are completed (generated or uploaded)
+    const hasCompletedVideo = question.usages.some(usage =>
+      usage.video && (usage.video.status === "UPLOADED" || usage.video.status === "GENERATED")
     )
+
+    // Also check if this question is currently being processed
+    const isGenerating = generatingVideos.has(question.id)
+
+    console.log(`Question ${question.id} hasCompletedVideo:`, hasCompletedVideo, "isGenerating:", isGenerating, "usages:", question.usages.length)
+    if (question.usages.length > 0) {
+      console.log("Usage details:", question.usages.map(u => ({ videoId: u.video?.id, status: u.video?.status })))
+    }
+
+    return hasCompletedVideo || isGenerating
+  }
+
+  const generateVideoForQuestion = async (question: QuestionWithTopic) => {
+    const questionId = question.id
+
+    // Add to generating set
+    setGeneratingVideos(prev => new Set(prev).add(questionId))
+
+    // Initialize logs for this question
+    setVideoLogs(prev => ({
+      ...prev,
+      [questionId]: ["Starting video generation..."]
+    }))
+
+    try {
+      // Generate title and description
+      const classSubject = `${question.topic.subject.class.name} ${question.topic.subject.name}`
+      const topic = question.topic.name
+      const title = `${classSubject} | ${topic} Quiz #${Math.floor(Math.random() * 1000)}`
+      const description = generateDetailedVideoDescription(
+        1,
+        topic,
+        classSubject,
+        question.topic.subject.name,
+        true, // include educational value
+        true, // include hashtags
+        true  // include study tips
+      )
+
+      // Add log entry
+      setVideoLogs(prev => ({
+        ...prev,
+        [questionId]: [...(prev[questionId] || []), "Preparing video data..."]
+      }))
+
+      const response = await fetch("/api/generate-video", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          questionIds: [questionId],
+          title,
+          description,
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+
+        // Add success log
+        setVideoLogs(prev => ({
+          ...prev,
+          [questionId]: [...(prev[questionId] || []), `✅ Video generation started! Video ID: ${result.video.id}`, "Video processing in background..."]
+        }))
+
+        // Start polling for video status updates after a short delay
+        setTimeout(() => {
+          const pollInterval = setInterval(async () => {
+            try {
+              const videoResponse = await fetch(`/api/videos/${result.video.id}`)
+              if (videoResponse.ok) {
+                const videoData = await videoResponse.json()
+                console.log("Video status:", videoData.status, "for video ID:", result.video.id)
+
+                // Update logs based on video status
+                const currentLogs = videoLogs[questionId] || []
+                const newLogs = [...currentLogs]
+
+                if (videoData.status === "GENERATING" && !currentLogs.includes("🎬 Video rendering in progress...")) {
+                  newLogs.push("🎬 Video rendering in progress...")
+                } else if (videoData.status === "GENERATED" && !currentLogs.includes("✅ Video generation completed!")) {
+                  newLogs.push("✅ Video generation completed!")
+                  newLogs.push("🎉 Video is ready for upload!")
+                } else if (videoData.status === "FAILED" && !currentLogs.includes("❌ Video generation failed")) {
+                  newLogs.push("❌ Video generation failed")
+                }
+
+                if (newLogs.length !== currentLogs.length) {
+                  setVideoLogs(prev => ({
+                    ...prev,
+                    [questionId]: newLogs
+                  }))
+                  console.log("Updated logs for question", questionId, ":", newLogs)
+                }
+
+                // If video is completed or failed, stop polling
+                if (videoData.status === "GENERATED" || videoData.status === "FAILED") {
+                  console.log("Video generation completed, stopping polling and refreshing questions")
+                  clearInterval(pollInterval)
+                  setPollingIntervals(prev => {
+                    const newIntervals = { ...prev }
+                    delete newIntervals[questionId]
+                    return newIntervals
+                  })
+
+                  // Update the specific question's video status immediately
+                  setQuestions(prevQuestions => {
+                    return prevQuestions.map(q => {
+                      if (q.id === questionId) {
+                        // Find the usage for this video and update its status
+                        const updatedUsages = q.usages.map(usage => {
+                          if (usage.video && usage.video.id === result.video.id) {
+                            return {
+                              ...usage,
+                              video: {
+                                ...usage.video,
+                                status: videoData.status
+                              }
+                            }
+                          }
+                          return usage
+                        })
+
+                        console.log(`Updated question ${questionId} with video status ${videoData.status}`)
+                        return {
+                          ...q,
+                          usages: updatedUsages
+                        }
+                      }
+                      return q
+                    })
+                  })
+
+                  // Also refresh questions as backup
+                  setTimeout(() => {
+                    console.log("Refreshing questions as backup after video completion")
+                    fetchQuestions()
+                  }, 2000)
+                }
+              } else {
+                console.error("Failed to fetch video status:", videoResponse.status)
+              }
+            } catch (error) {
+              console.error("Error polling video status:", error)
+            }
+          }, 2000) // Poll every 2 seconds
+
+          // Store the polling interval
+          setPollingIntervals(prev => ({
+            ...prev,
+            [questionId]: pollInterval
+          }))
+        }, 1000) // Wait 1 second before starting polling
+
+      } else {
+        const error = await response.json()
+
+        // Add error log
+        setVideoLogs(prev => ({
+          ...prev,
+          [questionId]: [...(prev[questionId] || []), `❌ Error: ${error.error}`]
+        }))
+      }
+    } catch (error) {
+      console.error("Error generating video:", error)
+
+      // Add error log
+      setVideoLogs(prev => ({
+        ...prev,
+        [questionId]: [...(prev[questionId] || []), "❌ Network error occurred"]
+      }))
+    } finally {
+      // Remove from generating set after a delay to allow polling to work
+      setTimeout(() => {
+        setGeneratingVideos(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(questionId)
+          return newSet
+        })
+      }, 5000) // Keep in generating state for 5 seconds after API call
+    }
   }
 
   if (isLoading) {
@@ -380,11 +606,17 @@ export default function QuestionsPage() {
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}>
                     {question.difficulty}
                   </span>
-                  {hasExistingVideo(question) && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                      Has Video
+                  {hasExistingVideo(question) && (() => {
+                    const videoUsage = question.usages.find(usage => usage.video && (usage.video.status === "UPLOADED" || usage.video.status === "GENERATED"))
+                    const status = videoUsage?.video?.status
+                    return (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        status === "UPLOADED" ? "bg-green-100 text-green-800" : "bg-blue-100 text-blue-800"
+                      }`}>
+                        {status === "UPLOADED" ? "Video Uploaded" : "Video Ready"}
                     </span>
-                  )}
+                    )
+                  })()}
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {question.text}
@@ -408,6 +640,37 @@ export default function QuestionsPage() {
                   <strong>Explanation:</strong> {question.explanation}
                 </div>
               </div>
+
+              {/* Video Generation Progress */}
+              {generatingVideos.has(question.id) && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                  <div className="flex items-center mb-2">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                    <span className="text-sm font-medium text-blue-800">Generating Video...</span>
+                  </div>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {videoLogs[question.id]?.map((log, index) => (
+                      <div key={index} className="text-xs text-blue-700 font-mono">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Video Generation Logs (when not actively generating) */}
+              {videoLogs[question.id] && !generatingVideos.has(question.id) && videoLogs[question.id].length > 0 && (
+                <div className="mt-4 p-3 bg-gray-50 border border-gray-200 rounded-md">
+                  <div className="text-xs text-gray-600 space-y-1 max-h-24 overflow-y-auto">
+                    {videoLogs[question.id].slice(-3).map((log, index) => (
+                      <div key={index} className="font-mono">
+                        {log}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-col space-y-2 ml-4">
                 <a
                   href={`/dashboard/questions/${question.id}/edit`}
@@ -415,21 +678,55 @@ export default function QuestionsPage() {
                 >
                   Edit
                 </a>
-                <Link
-                  href={`/dashboard/generate?questionId=${question.id}`}
-                  className={`px-3 py-1 rounded text-sm text-center font-medium ${
-                    hasExistingVideo(question)
-                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                <button
+                  onClick={() => generateVideoForQuestion(question)}
+                  disabled={(() => {
+                    const hasCompletedVideo = question.usages.some(usage =>
+                      usage.video && (usage.video.status === "UPLOADED" || usage.video.status === "GENERATED")
+                    )
+                    const isGenerating = generatingVideos.has(question.id)
+                    return hasCompletedVideo || isGenerating
+                  })()}
+                  className={`px-3 py-1 rounded text-sm text-center font-medium transition-colors ${
+                    (() => {
+                      const hasCompletedVideo = question.usages.some(usage =>
+                        usage.video && (usage.video.status === "UPLOADED" || usage.video.status === "GENERATED")
+                      )
+                      const isGenerating = generatingVideos.has(question.id)
+
+                      if (hasCompletedVideo) {
+                        return "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      } else if (isGenerating) {
+                        return "bg-yellow-500 text-yellow-800 cursor-wait"
+                      } else {
+                        return "bg-purple-600 hover:bg-purple-700 text-white"
+                      }
+                    })()
                   }`}
-                  onClick={(e) => {
-                    if (hasExistingVideo(question)) {
-                      e.preventDefault()
-                    }
-                  }}
                 >
-                  {hasExistingVideo(question) ? "✅ Video Exists" : "🎬 Generate Video"}
-                </Link>
+                  {(() => {
+                    const hasCompletedVideo = question.usages.some(usage =>
+                      usage.video && (usage.video.status === "UPLOADED" || usage.video.status === "GENERATED")
+                    )
+                    const isGenerating = generatingVideos.has(question.id)
+
+                    if (hasCompletedVideo) {
+                      const videoUsage = question.usages.find(usage => usage.video && (usage.video.status === "UPLOADED" || usage.video.status === "GENERATED"))
+                      return videoUsage?.video?.status === "UPLOADED" ? "✅ Video Uploaded" : "✅ Video Ready"
+                    } else if (isGenerating) {
+                      return "⏳ Generating..."
+                    } else {
+                      return "🎬 Generate Video"
+                    }
+                  })()}
+                </button>
+                <button
+                  onClick={() => deleteQuestion(question.id, question.text)}
+                  className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm text-center font-medium transition-colors"
+                  title="Delete this question"
+                >
+                  🗑️ Delete
+                </button>
                 {question.status === "PENDING" && (
                   <>
                     <button

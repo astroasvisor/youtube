@@ -69,7 +69,7 @@ export const QuizQuestion: React.FC<{
 
   // 50 second total duration: 35s question + 15s answer reveal
   const questionPhaseFrames = 35 * fps
-  const answerPhaseFrames = 15 * fps
+  // const answerPhaseFrames = 15 * fps
 
   const isQuestionPhase = frame < questionPhaseFrames
   const isAnswerPhase = frame >= questionPhaseFrames
@@ -201,8 +201,8 @@ export const QuizQuestion: React.FC<{
   // --- Audio Logic ---
   // Timer audio: Loop timer.mp3 (10s) 3 times during countdown
   const shouldPlayTimerAudio = isCountdownVisible
-  const timerLoopCount = 3
-  const timerLoopDuration = 10 * fps // 10 seconds per loop
+  // const timerLoopCount = 3
+  // const timerLoopDuration = 10 * fps // 10 seconds per loop
   
   // Audio timing frames
   const chimeStartFrame = questionPhaseFrames

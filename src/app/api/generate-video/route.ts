@@ -4,6 +4,7 @@ import { exec } from "child_process"
 import { promisify } from "util"
 import path from "path"
 import fs from "fs"
+import { Video, Question } from "@prisma/client"
 
 const execAsync = promisify(exec)
 
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function generateVideoWithRemotion(video: any, questions: any[]) {
+async function generateVideoWithRemotion(video: Video, questions: Question[]) {
   try {
     // Create temporary directory for video generation
     const tempDir = path.join(process.cwd(), "temp", video.id)

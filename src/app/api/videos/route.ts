@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { VideoStatus } from "@prisma/client"
 
 // GET /api/videos - Get all videos with optional status filter
 export async function GET(request: Request) {
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status")
 
     const whereClause = status && status !== "ALL"
-      ? { status: status as any }
+      ? { status: status as VideoStatus }
       : {}
 
     const videos = await prisma.video.findMany({

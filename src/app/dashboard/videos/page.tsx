@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Video, Class, Subject, Topic } from "@prisma/client"
 
 interface VideoWithDetails extends Video {
@@ -17,11 +17,7 @@ export default function VideosPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedStatus, setSelectedStatus] = useState<VideoStatus | "ALL">("ALL")
 
-  useEffect(() => {
-    fetchVideos()
-  }, [selectedStatus])
-
-  const fetchVideos = async () => {
+  const fetchVideos = useCallback(async () => {
     try {
       const url = selectedStatus === "ALL"
         ? "/api/videos"
@@ -36,7 +32,11 @@ export default function VideosPage() {
       console.error("Error fetching videos:", error)
     }
     setIsLoading(false)
-  }
+  }, [selectedStatus])
+
+  useEffect(() => {
+    fetchVideos()
+  }, [selectedStatus, fetchVideos])
 
   const uploadToYouTube = async (video: VideoWithDetails) => {
     try {
@@ -191,7 +191,7 @@ export default function VideosPage() {
                 ))}
                 {video.questions.length > 4 && (
                   <div className="text-sm text-gray-500 px-2 py-1">
-                    +{video.questions.length - 4} more questions
+                    +{video.questions.length - 4} more {video.questions.length - 4 === 1 ? 'question' : 'questions'}
                   </div>
                 )}
               </div>

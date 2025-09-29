@@ -27,3 +27,162 @@ html {
 body {
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ensure select elements have proper contrast and styling */
+select {
+  background-color: white !important;
+  color: rgb(17, 24, 39) !important; /* gray-900 */
+  border: 1px solid rgb(209, 213, 219) !important; /* gray-300 */
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 0.375rem !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  font-size: 0.875rem !important; /* text-sm */
+  line-height: 1.25rem !important;
+}
+
+select:focus {
+  outline: none !important;
+  border-color: rgb(99, 102, 241) !important; /* indigo-500 */
+  box-shadow: 0 0 0 3px rgb(224, 231, 255) !important; /* indigo-100 */
+}
+
+select:disabled {
+  background-color: rgb(243, 244, 246) !important; /* gray-100 */
+  color: rgb(156, 163, 175) !important; /* gray-400 */
+  cursor: not-allowed !important;
+}
+
+/* Style select options for better visibility */
+select option {
+  background-color: white !important;
+  color: rgb(17, 24, 39) !important; /* gray-900 */
+  padding: 0.25rem 0.5rem !important;
+}
+
+select option:disabled {
+  background-color: rgb(243, 244, 246) !important; /* gray-100 */
+  color: rgb(156, 163, 175) !important; /* gray-400 */
+}
+
+/* Fix for webkit browsers (Chrome, Safari, Edge) */
+select::-webkit-scrollbar {
+  width: 6px;
+}
+
+select::-webkit-scrollbar-track {
+  background: rgb(243, 244, 246);
+}
+
+select::-webkit-scrollbar-thumb {
+  background: rgb(209, 213, 219);
+  border-radius: 3px;
+}
+
+select::-webkit-scrollbar-thumb:hover {
+  background: rgb(156, 163, 175);
+}
+
+/* Ensure input elements have proper contrast and styling */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="url"],
+input[type="search"],
+textarea {
+  background-color: white !important;
+  color: rgb(17, 24, 39) !important; /* gray-900 */
+  border: 1px solid rgb(209, 213, 219) !important; /* gray-300 */
+  padding: 0.5rem 0.75rem !important;
+  border-radius: 0.375rem !important;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05) !important;
+  font-size: 0.875rem !important; /* text-sm */
+  line-height: 1.25rem !important;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+textarea:focus {
+  outline: none !important;
+  border-color: rgb(99, 102, 241) !important; /* indigo-500 */
+  box-shadow: 0 0 0 3px rgb(224, 231, 255) !important; /* indigo-100 */
+}
+
+input[type="text"]:disabled,
+input[type="email"]:disabled,
+input[type="password"]:disabled,
+input[type="number"]:disabled,
+input[type="url"]:disabled,
+input[type="search"]:disabled,
+textarea:disabled {
+  background-color: rgb(243, 244, 246) !important; /* gray-100 */
+  color: rgb(156, 163, 175) !important; /* gray-400 */
+  cursor: not-allowed !important;
+}
+
+/* Checkbox and radio styling */
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: rgb(99, 102, 241) !important; /* indigo-500 */
+}
+
+/* Improve placeholder visibility */
+input::placeholder,
+textarea::placeholder {
+  color: rgb(107, 114, 128) !important; /* gray-500 */
+  opacity: 1 !important;
+}
+
+/* Ensure checkboxes and their labels have proper contrast */
+input[type="checkbox"] + label,
+input[type="radio"] + label,
+label:has(input[type="checkbox"]),
+label:has(input[type="radio"]) {
+  color: rgb(17, 24, 39) !important; /* gray-900 */
+  font-weight: inherit !important;
+}
+
+input[type="checkbox"] + span,
+input[type="radio"] + span {
+  color: rgb(17, 24, 39) !important; /* gray-900 */
+}
+
+/* Improve checkbox visibility in all states */
+input[type="checkbox"]:checked {
+  background-color: rgb(99, 102, 241) !important; /* indigo-500 */
+  border-color: rgb(99, 102, 241) !important; /* indigo-500 */
+}
+
+input[type="checkbox"]:focus {
+  outline: 2px solid rgb(224, 231, 255) !important; /* indigo-100 */
+  outline-offset: 2px !important;
+}
+
+/* Ensure disabled checkboxes are properly styled */
+input[type="checkbox"]:disabled {
+  background-color: rgb(243, 244, 246) !important; /* gray-100 */
+  border-color: rgb(209, 213, 219) !important; /* gray-300 */
+  cursor: not-allowed !important;
+}
+
+input[type="checkbox"]:disabled + label,
+input[type="checkbox"]:disabled + span {
+  color: rgb(156, 163, 175) !important; /* gray-400 */
+  cursor: not-allowed !important;
+}
+
+/* Additional styling for nested checkbox labels */
+label input[type="checkbox"],
+label input[type="radio"] {
+  margin-right: 0.5rem !important;
+}
+
+/* Ensure any text following checkboxes has proper contrast */
+input[type="checkbox"] ~ *,
+input[type="radio"] ~ * {
+  color: rgb(17, 24, 39) !important; /* gray-900 */
+}

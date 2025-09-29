@@ -109,7 +109,7 @@ export default function YouTubeDashboardPage() {
             }
           }))
         }
-      } catch (error) {
+      } catch {
         setUploadStatus(prev => ({
           ...prev,
           [videoId]: {
@@ -238,7 +238,7 @@ export default function YouTubeDashboardPage() {
                   onChange={(e) => handleSelectAll(e.target.checked)}
                   className="rounded"
                 />
-                <span className="text-sm font-medium">Select All</span>
+                <span className="text-sm font-medium text-gray-900">Select All</span>
               </label>
               <button
                 onClick={handleUploadSelected}
@@ -305,7 +305,7 @@ export default function YouTubeDashboardPage() {
                   ))}
                   {video.questions.length > 4 && (
                     <div className="text-sm text-gray-500 px-2 py-1">
-                      +{video.questions.length - 4} more questions
+                      +{video.questions.length - 4} more {video.questions.length - 4 === 1 ? 'question' : 'questions'}
                     </div>
                   )}
                 </div>
@@ -339,9 +339,9 @@ export default function YouTubeDashboardPage() {
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mt-8">
           <h2 className="text-xl font-semibold mb-4 text-blue-900">How to Use This Testbed</h2>
           <div className="text-blue-800 space-y-2 text-sm">
-            <p>• This page shows only videos with "GENERATED" status that are ready for upload</p>
-            <p>• Select individual videos or use "Select All" to choose multiple videos</p>
-            <p>• Click "Upload Selected" to upload videos one by one to YouTube</p>
+            <p>• This page shows only videos with &quot;GENERATED&quot; status that are ready for upload</p>
+            <p>• Select individual videos or use &quot;Select All&quot; to choose multiple videos</p>
+            <p>• Click &quot;Upload Selected&quot; to upload videos one by one to YouTube</p>
             <p>• Monitor progress and view results in real-time</p>
             <p>• Use this as a controlled environment to test YouTube uploads before batch operations</p>
             <p>• Each upload includes the video title, description, and first question in the description</p>

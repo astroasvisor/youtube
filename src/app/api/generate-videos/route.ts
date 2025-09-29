@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { generateVideoContentForSubjects } from "@/lib/openai"
-import { selectTopicsForVideoGeneration, recordTopicUsage, getTopicsHistory } from "@/lib/topic-selection"
+import { selectTopicsForVideoGeneration, getTopicsHistory } from "@/lib/topic-selection"
+import { Video, Question } from "@prisma/client"
 import path from "path"
 import fs from "fs"
 
@@ -278,7 +279,7 @@ export async function POST(request: Request) {
 }
 
 // Helper function to generate video (extracted from generate-video route)
-async function generateVideoWithRemotion(video: any, questions: any[]) {
+async function generateVideoWithRemotion(video: Video, questions: Question[]) {
   try {
     // Create temporary directory for video generation
     const tempDir = path.join(process.cwd(), "temp", video.id)

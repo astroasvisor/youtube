@@ -31,7 +31,7 @@ interface AutoPostStatus {
 }
 
 export default function AutoPostPage() {
-  const { data: session, status } = useSession()
+  const { status } = useSession()
   const [classes, setClasses] = useState<Class[]>([])
   const [selectedClassId, setSelectedClassId] = useState<string>("")
   const [autoPostStatus, setAutoPostStatus] = useState<AutoPostStatus>({
@@ -385,7 +385,7 @@ export default function AutoPostPage() {
         <h2 className="text-xl font-semibold mb-4 text-blue-900">How Auto-Post Works</h2>
         <div className="text-blue-800 space-y-2 text-sm">
           <p>• Select a class to generate videos for all its subjects</p>
-          <p>• The system will intelligently select topics that haven't been used recently</p>
+          <p>• The system will intelligently select topics that haven&apos;t been used recently</p>
           <p>• One video will be created per subject with engaging titles and descriptions</p>
           <p>• Videos are automatically generated and uploaded to YouTube</p>
           <p>• The process runs asynchronously - you can close this page and check back later</p>

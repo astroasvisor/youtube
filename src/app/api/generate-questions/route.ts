@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { generateQuestions } from "@/lib/openai"
 import { prisma } from "@/lib/prisma"
+import { Difficulty } from "@prisma/client"
 
 // POST /api/generate-questions - Generate questions using OpenAI
 export async function POST(request: Request) {
@@ -66,7 +67,7 @@ export async function POST(request: Request) {
             optionD: question.optionD,
             correctAnswer: question.correctAnswer,
             explanation: question.explanation,
-            difficulty: difficulty as any,
+            difficulty: difficulty as Difficulty,
             status: "APPROVED",
             topicId: topicId,
           },
@@ -79,7 +80,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({
-      message: `Generated ${savedQuestions.length} questions`,
+      message: `Generated ${savedQuestions.length} ${savedQuestions.length === 1 ? 'question' : 'questions'}`,
       questions: savedQuestions,
     })
   } catch (error) {

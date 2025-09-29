@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
+import { QuestionStatus, Difficulty } from "@prisma/client"
 
 // GET /api/questions - Get all questions with optional status filter
 export async function GET(request: Request) {
@@ -8,7 +9,7 @@ export async function GET(request: Request) {
     const status = searchParams.get("status")
 
     const whereClause = status && status !== "ALL"
-      ? { status: status as any }
+      ? { status: status as QuestionStatus }
       : {}
 
     const questions = await prisma.question.findMany({
@@ -143,8 +144,8 @@ export async function POST(request: Request) {
         optionD,
         correctAnswer,
         explanation,
-        difficulty: difficulty as any,
-        status: status as any,
+        difficulty: difficulty as Difficulty,
+        status: status as QuestionStatus,
         topicId,
       },
       include: {
