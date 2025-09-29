@@ -1,5 +1,6 @@
 import React from "react"
 import { useCurrentFrame, useVideoConfig, spring, Audio, staticFile, Sequence } from "remotion"
+import { Theme } from "../themes"
 
 // Character entrance animation - appears after last option
 const getCharacterOpacity = (frame: number, fps: number) => {
@@ -55,7 +56,8 @@ interface Question {
 
 export const QuizQuestion: React.FC<{
   question: Question
-}> = ({ question }) => {
+  theme: Theme
+}> = ({ question, theme }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -360,18 +362,17 @@ export const QuizQuestion: React.FC<{
             { letter: "C", text: question.optionC },
             { letter: "D", text: question.optionD },
           ].map((option, index) => (
-            <div
-              key={option.letter}
-              style={{
-                background: "#fde047", // Yellow background
-                borderRadius: "20px",
-                padding: "30px 35px",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                transform: `translateX(${getOptionEntrance(index)}px)`,
-                opacity: getOptionOpacity(index),
-                border: "4px solid #1f2937", // Black border
-              }}
-            >
+              <div
+                key={option.letter}
+                style={{
+                  background: "#fde047", // Yellow background
+                  borderRadius: "20px",
+                  padding: "30px 35px",
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                  transform: `translateX(${getOptionEntrance(index)}px)`,
+                  opacity: getOptionOpacity(index),
+                }}
+              >
               <div
                 style={{
                   display: "flex",
@@ -536,7 +537,6 @@ export const QuizQuestion: React.FC<{
                   background: "#fde047",
                   borderRadius: "20px",
                   padding: "30px 35px",
-                  border: `4px solid #1f2937`,
                   boxShadow: `0 8px 20px rgba(0,0,0,0.1)`,
                 }}
               >
@@ -588,7 +588,6 @@ export const QuizQuestion: React.FC<{
             width: "90%",
             maxWidth: "1000px",
             boxShadow: "0 10px 20px rgba(0,0,0,0.2)",
-            border: '4px solid #1f2937',
             opacity: spring({
               frame: frame - explanationStartFrame,
               fps,
@@ -725,7 +724,7 @@ export const QuizQuestion: React.FC<{
           volume={1.0}
         />
       </Sequence>
-      {/* Thinking Character - appears during question phase */}
+      {/* Character - appears during question phase */}
       <div
         style={{
           position: "absolute",
@@ -737,11 +736,11 @@ export const QuizQuestion: React.FC<{
         }}
       >
         <img
-          src={staticFile("images/thinking.png")}
-          alt="Thinking character"
+          src={staticFile(theme.characterImage)}
+          alt="Character"
           style={{
             width: "720px",
-            height: "720px",
+            height: "auto",
           }}
         />
       </div>

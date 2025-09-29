@@ -21,7 +21,7 @@ export async function generateQuestion(
   difficulty: "EASY" | "MEDIUM" | "HARD" = "MEDIUM"
 ): Promise<GeneratedQuestion> {
   try {
-    const prompt = `Create an engaging multiple-choice question for ${className} ${subjectName} students about "${topicName}" - optimized for YouTube Shorts!
+    const prompt = `Create an engaging multiple-choice question for ${className} ${subjectName} students about "${topicName}" - optimized for YouTube Shorts! It is very important that if more than one question is asked to be generated in one request, then provide enough variety of questions to cover all major aspects of the topic.Please do not send variations of the same question.
 
 🎯 YOUTUBE SHORTS OPTIMIZATION:
 - Question must be THEORETICAL only (NO calculations, NO math, NO numbers)
@@ -32,7 +32,7 @@ export async function generateQuestion(
 
 📝 QUESTION REQUIREMENTS:
 - Difficulty: ${difficulty}
-- CBSE syllabus-based but made interesting
+- IMPORTANT: CBSE/NEET/JEE syllabus-based but made interesting
 - Test CONCEPTUAL understanding, not memorization
 - Question text: 60-80 characters max (fits on screen)
 - 4 options: Clear, distinct, plausible answers
@@ -50,6 +50,9 @@ export async function generateQuestion(
 - Complex scientific terms (explain simply)
 - Boring definitions or classifications
 - Questions that require deep analysis
+- Avoid sending variations of the same question like in this manner:
+  Variation 1: Why is hydrogen called the 'universal fuel' in stars?
+  Variation 2: Why is hydrogen called the 'fuel of the future'?
 
 ✅ EXAMPLES OF GOOD QUESTIONS:
 - "What makes leaves green?" (not "Calculate chlorophyll absorption")
@@ -74,7 +77,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
       messages: [
         {
           role: "system",
-          content: "You are a creative teacher making fun, engaging quiz questions for YouTube Shorts! Create theoretical questions that are quick to read, spark curiosity, and teach something interesting. Focus on conceptual understanding with everyday examples. Always respond with valid JSON only - no extra text!"
+          content: "You are a creative teacher making fun, engaging quiz questions for YouTube Shorts! Create theoretical questions that are quick to read, spark curiosity, and teach something interesting. Focus on conceptual understanding with everyday examples. Always respond with valid JSON only - no extra text!. Do not include numerical problems, and heavy calculations as the content is for YouTube Shorts. There are enough theoretical problems asked in previous exams and books like Concepts of Physics, H.C. Verma, etc. It is very important that if more than one question is asked to be generated in one request, then provide enough variety of questions to cover all major aspects of the topic."
         },
         {
           role: "user",
@@ -274,7 +277,7 @@ You MUST respond with valid JSON only - no extra text!`
       messages: [
         {
           role: "system",
-          content: "You are a creative educational content creator specializing in YouTube Shorts. Create engaging, curiosity-driven quiz content that makes learning fun and addictive. Focus on creating titles that make viewers want to click, descriptions that hook them immediately, and questions that spark genuine interest in the subject."
+          content: "You are a creative educational content creator specializing in YouTube Shorts. Create engaging, curiosity-driven quiz content that makes learning fun and addictive. Focus on creating titles that make viewers want to click, descriptions that hook them immediately, and questions that spark genuine interest in the subject. Keep the question inspired by NEET/JEE/CBSE/ICSE syllabus. But do not include numerical problems, and heavy calculations as the content is for YouTube Shorts. There are enough theoretical problems asked in previous exams and books like Concepts of Physics, H.C. Verma, etc. It is very important that if more than one question is asked to be generated in one request, then provide enough variety of questions to cover all major aspects of the topic."
         },
         {
           role: "user",

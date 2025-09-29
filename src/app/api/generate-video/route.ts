@@ -53,6 +53,9 @@ export async function POST(request: Request) {
       )
     }
 
+    // Get subject name for theming
+    const subjectName = questions[0].topic.subject.name
+
     // Create video record
     const video = await prisma.video.create({
       data: {
@@ -80,7 +83,7 @@ export async function POST(request: Request) {
     })
 
     // Generate video using Remotion (in background)
-    generateVideoWithRemotion(video, questions).catch((error) => {
+    generateVideoWithRemotion(video, questions, subjectName).catch((error) => {
       console.error("Error generating video:", error)
       // Update video status to failed
       prisma.video.update({
@@ -102,7 +105,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function generateVideoWithRemotion(video: Video, questions: Question[]) {
+async function generateVideoWithRemotion(video: Video, questions: Question[], subjectName: string) {
   try {
     // Create temporary directory for video generation
     const tempDir = path.join(process.cwd(), "temp", video.id)
@@ -128,9 +131,10 @@ import { QuizVideo } from "./src/remotion/compositions/QuizVideo"
 // Questions data with proper typing
 const questions = ${JSON.stringify(questionsData)}
 const title = "${video.title.replace(/"/g, '\\"')}"
+const subject = "${subjectName.replace(/"/g, '\\"')}"
 
-// Register the QuizVideo component directly with the questions data
-registerRoot(() => QuizVideo({ questions, title }))
+// Register the QuizVideo component directly with the questions data and subject
+registerRoot(() => QuizVideo({ questions, title, subject }))
 `
 
     const entryFilePath = path.join(tempDir, "index.ts")

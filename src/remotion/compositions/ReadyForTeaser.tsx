@@ -1,7 +1,10 @@
 import React from "react"
 import { useCurrentFrame, useVideoConfig, spring, staticFile } from "remotion"
+import { Theme } from "../themes"
 
-export const ReadyForTeaser: React.FC = () => {
+export const ReadyForTeaser: React.FC<{
+  theme: Theme
+}> = ({ theme }) => {
   const frame = useCurrentFrame()
   const { fps } = useVideoConfig()
 
@@ -73,7 +76,7 @@ export const ReadyForTeaser: React.FC = () => {
       style={{
         width: "100%",
         height: "100%",
-        background: "linear-gradient(135deg, #4F46E5 0%, #059669 100%)",
+        background: theme.backgroundGradient,
         position: "relative",
         display: "flex",
         flexDirection: "column",
@@ -83,54 +86,58 @@ export const ReadyForTeaser: React.FC = () => {
         opacity: overallOpacity,
       }}
     >
-      {/* Background geometric elements - same as intro screen for continuity */}
-      <div
-        style={{
-          position: "absolute",
-          top: "10%",
-          left: "10%",
-          width: "80px",
-          height: "80px",
-          background: "rgba(255, 255, 255, 0.1)",
-          borderRadius: "50%",
-          transform: `rotate(${frame * 2}deg)`,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          top: "20%",
-          right: "15%",
-          width: "60px",
-          height: "60px",
-          background: "rgba(255, 255, 255, 0.08)",
-          transform: `rotate(${-frame * 1.5}deg)`,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: "25%",
-          left: "20%",
-          width: "100px",
-          height: "100px",
-          background: "rgba(255, 255, 255, 0.06)",
-          borderRadius: "20px",
-          transform: `rotate(${frame * 1.2}deg)`,
-        }}
-      />
-      <div
-        style={{
-          position: "absolute",
-          bottom: "15%",
-          right: "25%",
-          width: "70px",
-          height: "70px",
-          background: "rgba(255, 255, 255, 0.1)",
-          borderRadius: "50%",
-          transform: `rotate(${-frame * 2.5}deg)`,
-        }}
-      />
+      {/* Subject Icons - Much More Visible! */}
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Biology" && "🌳"}
+      </div>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Biology" && "🍃"}
+      </div>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Biology" && "🐾"}
+      </div>
+      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Biology" && "🌸"}
+      </div>
+
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Physics" && "⚛️"}
+      </div>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Physics" && "⚡"}
+      </div>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Physics" && "🌊"}
+      </div>
+      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Physics" && "🔬"}
+      </div>
+
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Chemistry" && "🧪"}
+      </div>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Chemistry" && "⚗️"}
+      </div>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Chemistry" && "🧫"}
+      </div>
+      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Chemistry" && "⚛️"}
+      </div>
+
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Mathematics" && "📐"}
+      </div>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Mathematics" && "📊"}
+      </div>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Mathematics" && "📈"}
+      </div>
+      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+        {theme.name === "Mathematics" && "🔢"}
+      </div>
 
       {/* Science 4 Fun Title - same as intro screen */}
       <div
@@ -235,7 +242,7 @@ export const ReadyForTeaser: React.FC = () => {
       <div
         style={{
           position: "absolute",
-          bottom: -150,
+            bottom: -120,
           left: "50%",
           transform: `translateX(-50%) translateY(${characterTranslateY}px)`,
           opacity: characterOpacity,
@@ -243,11 +250,11 @@ export const ReadyForTeaser: React.FC = () => {
         }}
         >
           <img
-            src={staticFile("images/thinking.png")}
-            alt="Thinking character"
+            src={staticFile(theme.characterImage)}
+            alt="Character"
             style={{
               width: "960px",
-              height: "960px",
+              height: "auto",
             }}
           />
         </div>

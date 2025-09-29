@@ -9,6 +9,7 @@ import {
 import { QuizQuestion } from "./QuizQuestion"
 import { IntroScreen } from "./IntroScreen"
 import { ReadyForTeaser } from "./ReadyForTeaser"
+import { Theme, getThemeForSubject } from "../themes"
 
 export interface Question {
   id: string
@@ -24,7 +25,9 @@ export interface Question {
 export const QuizVideo: React.FC<{
   questions: Question[]
   title: string
-}> = ({ questions, title }) => {
+  subject?: string
+}> = ({ questions, title, subject = "default" }) => {
+  const theme = getThemeForSubject(subject)
   // 5 seconds intro + 50 seconds per question (35s question + 15s answer)
   const introDuration = 6 // 3s intro + 3s teaser
   const totalDuration = introDuration + (questions.length * 50)
@@ -40,6 +43,7 @@ export const QuizVideo: React.FC<{
       defaultProps={{
         questions,
         title,
+        theme,
       }}
     />
   )
@@ -48,7 +52,8 @@ export const QuizVideo: React.FC<{
 const QuizVideoComposition: React.FC<{
   questions: Question[]
   title: string
-}> = ({ questions }) => {
+  theme: Theme
+}> = ({ questions, theme }) => {
   const { fps, durationInFrames } = useVideoConfig()
 
   // Calculate timing for the entire video
@@ -63,7 +68,7 @@ const QuizVideoComposition: React.FC<{
       style={{
         width: "100%",
         height: "100%",
-        background: "linear-gradient(135deg, #4F46E5 0%, #059669 100%)",
+        background: theme.backgroundGradient,
         position: "relative",
       }}
     >
@@ -79,12 +84,12 @@ const QuizVideoComposition: React.FC<{
 
       {/* Intro Screen - 3 seconds */}
       <Sequence from={0} durationInFrames={introDuration}>
-        <IntroScreen />
+        <IntroScreen theme={theme} />
       </Sequence>
 
       {/* Teaser Screen - 2 seconds */}
       <Sequence from={introDuration} durationInFrames={teaserDuration}>
-        <ReadyForTeaser />
+        <ReadyForTeaser theme={theme} />
       </Sequence>
 
       {/* Sequence for each question - starts after 5 second intro */}
@@ -94,7 +99,7 @@ const QuizVideoComposition: React.FC<{
           from={(6 * fps) + (index * totalPerQuestion)}
           durationInFrames={totalPerQuestion}
         >
-          <QuizQuestion question={question} />
+          <QuizQuestion question={question} theme={theme} />
         </Sequence>
       ))}
     </div>
