@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Question, Topic, Subject, Class } from "@prisma/client"
 
 interface QuestionWithTopic extends Question {
@@ -12,6 +13,9 @@ interface QuestionWithTopic extends Question {
 }
 
 export default function GenerateVideoPage() {
+  const searchParams = useSearchParams()
+  const questionIdFromUrl = searchParams.get("questionId")
+
   const [questions, setQuestions] = useState<QuestionWithTopic[]>([])
   const [selectedQuestions, setSelectedQuestions] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -21,7 +25,22 @@ export default function GenerateVideoPage() {
 
   useEffect(() => {
     fetchApprovedQuestions()
-  }, [])
+
+    // Pre-select question from URL parameter and auto-generate title/description
+    if (questionIdFromUrl) {
+      setSelectedQuestions([questionIdFromUrl])
+
+      // Auto-generate title and description after questions are loaded
+      const timer = setTimeout(() => {
+        // Only auto-generate if the question exists in the loaded questions
+        if (questions.some(q => q.id === questionIdFromUrl)) {
+          autoGenerateTitle()
+        }
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [questionIdFromUrl])
 
   const fetchApprovedQuestions = async () => {
     try {

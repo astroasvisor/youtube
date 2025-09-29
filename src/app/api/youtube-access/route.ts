@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { google } from "googleapis"
 
 export async function GET(request: NextRequest) {
   try {
@@ -41,7 +42,48 @@ export async function GET(request: NextRequest) {
 
     // Check if access token is still valid (not expired)
     const now = Math.floor(Date.now() / 1000)
-    const isTokenValid = !account.expires_at || account.expires_at > now
+    let isTokenValid = !account.expires_at || account.expires_at > now
+
+    // If access token is expired but we have a refresh token, try to refresh it
+    if (!isTokenValid && account.refresh_token) {
+      try {
+        const oauth2Client = new google.auth.OAuth2(
+          process.env.GOOGLE_CLIENT_ID,
+          process.env.GOOGLE_CLIENT_SECRET,
+          `${process.env.NEXTAUTH_URL || "http://localhost:3000"}/api/auth/callback/google`
+        )
+
+        // Set the refresh token
+        oauth2Client.setCredentials({
+          refresh_token: account.refresh_token,
+        })
+
+        // Try to refresh the access token
+        const { credentials } = await oauth2Client.refreshAccessToken()
+
+        // Update the database with new tokens
+        await prisma.account.update({
+          where: {
+            id: account.id,
+          },
+          data: {
+            access_token: credentials.access_token,
+            expires_at: credentials.expiry_date ? Math.floor(credentials.expiry_date / 1000) : null,
+            refresh_token: credentials.refresh_token || account.refresh_token,
+          },
+        })
+
+        isTokenValid = true
+
+        console.log("Successfully refreshed YouTube access token")
+      } catch (refreshError) {
+        console.error("Error refreshing YouTube access token:", refreshError)
+        return NextResponse.json({
+          hasAccess: false,
+          reason: "Refresh token expired or invalid. Please sign in again with Google."
+        })
+      }
+    }
 
     return NextResponse.json({
       hasAccess: isTokenValid,

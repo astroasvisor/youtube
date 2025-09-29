@@ -38,22 +38,30 @@ export default function VideosPage() {
     setIsLoading(false)
   }
 
-  const uploadToYouTube = async (videoId: string) => {
+  const uploadToYouTube = async (video: VideoWithDetails) => {
     try {
-      const response = await fetch(`/api/videos/${videoId}/upload`, {
+      const response = await fetch(`/api/videos/${video.id}/upload`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          className: video.class.name,
+          subjectName: video.subject.name,
+        }),
       })
 
       if (response.ok) {
-        fetchVideos()
-        alert("Video upload to YouTube started!")
+        const result = await response.json()
+        fetchVideos() // Refresh the video list
+        alert(`✅ Video upload started successfully!\n\nTitle: ${result.message}\nYouTube URL: ${result.youtubeUrl}`)
       } else {
         const error = await response.json()
-        alert(`Upload failed: ${error.error}`)
+        alert(`❌ Upload failed: ${error.error}`)
       }
     } catch (error) {
       console.error("Error uploading video:", error)
-      alert("Failed to upload video")
+      alert("❌ Failed to upload video. Please check your connection and try again.")
     }
   }
 
@@ -148,10 +156,10 @@ export default function VideosPage() {
               <div className="flex space-x-2 ml-4">
                 {video.status === "GENERATED" && (
                   <button
-                    onClick={() => uploadToYouTube(video.id)}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                    onClick={() => uploadToYouTube(video)}
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm font-medium shadow-sm transition-colors"
                   >
-                    Upload to YouTube
+                    📺 Upload to YouTube
                   </button>
                 )}
                 {video.youtubeId && (
@@ -159,9 +167,9 @@ export default function VideosPage() {
                     href={`https://youtube.com/watch?v=${video.youtubeId}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="bg-gray-600 hover:bg-gray-700 text-white px-3 py-1 rounded text-sm"
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium shadow-sm transition-colors"
                   >
-                    View on YouTube
+                    🎥 View on YouTube
                   </a>
                 )}
               </div>

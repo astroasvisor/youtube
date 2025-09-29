@@ -23,6 +23,17 @@ export async function GET(request: Request) {
             },
           },
         },
+        usages: {
+          include: {
+            video: {
+              select: {
+                id: true,
+                status: true,
+                youtubeId: true,
+              },
+            },
+          },
+        },
       },
       orderBy: {
         createdAt: "desc",

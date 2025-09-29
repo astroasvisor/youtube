@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Question, Topic, Subject, Class } from "@prisma/client"
+import Link from "next/link"
 
 interface QuestionWithTopic extends Question {
   topic: Topic & {
@@ -9,6 +10,13 @@ interface QuestionWithTopic extends Question {
       class: Class
     }
   }
+  usages: Array<{
+    video: {
+      id: string
+      status: string
+      youtubeId: string | null
+    } | null
+  }>
 }
 
 interface ClassWithSubjects extends Class {
@@ -164,6 +172,12 @@ export default function QuestionsPage() {
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const hasExistingVideo = (question: QuestionWithTopic) => {
+    return question.usages.some(usage =>
+      usage.video && usage.video.status === "UPLOADED"
+    )
   }
 
   if (isLoading) {
@@ -366,6 +380,11 @@ export default function QuestionsPage() {
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getDifficultyColor(question.difficulty)}`}>
                     {question.difficulty}
                   </span>
+                  {hasExistingVideo(question) && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      Has Video
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg font-medium text-gray-900 mb-2">
                   {question.text}
@@ -389,13 +408,28 @@ export default function QuestionsPage() {
                   <strong>Explanation:</strong> {question.explanation}
                 </div>
               </div>
-              <div className="flex space-x-2 ml-4">
+              <div className="flex flex-col space-y-2 ml-4">
                 <a
                   href={`/dashboard/questions/${question.id}/edit`}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm text-center"
                 >
                   Edit
                 </a>
+                <Link
+                  href={`/dashboard/generate?questionId=${question.id}`}
+                  className={`px-3 py-1 rounded text-sm text-center font-medium ${
+                    hasExistingVideo(question)
+                      ? "bg-gray-400 text-gray-600 cursor-not-allowed"
+                      : "bg-purple-600 hover:bg-purple-700 text-white"
+                  }`}
+                  onClick={(e) => {
+                    if (hasExistingVideo(question)) {
+                      e.preventDefault()
+                    }
+                  }}
+                >
+                  {hasExistingVideo(question) ? "✅ Video Exists" : "🎬 Generate Video"}
+                </Link>
                 {question.status === "PENDING" && (
                   <>
                     <button

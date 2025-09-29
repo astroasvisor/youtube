@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { uploadToYouTube, generateYouTubeTags } from "@/lib/youtube"
+import { getServerSession } from "next-auth"
+import { authOptions } from "@/lib/auth"
 import path from "path"
 
 // POST /api/videos/[id]/upload - Upload video to YouTube
@@ -10,6 +12,27 @@ export async function POST(
 ) {
   const { id } = await params
   try {
+    const body = await request.json().catch(() => ({})) // Handle cases with no body
+
+    // Get user session for YouTube authentication
+    const session = await getServerSession(authOptions)
+
+    console.log("Session check:", {
+      hasSession: !!session,
+      hasAccessToken: !!session?.accessToken,
+      hasRefreshToken: !!session?.refreshToken,
+      userId: session?.user?.id,
+      userEmail: session?.user?.email
+    })
+
+    if (!session?.accessToken || !session?.refreshToken) {
+      console.log("Authentication failed - missing tokens")
+      return NextResponse.json(
+        { error: "YouTube authentication required. Please sign in with Google." },
+        { status: 401 }
+      )
+    }
+
     // Get video details
     const video = await prisma.video.findUnique({
       where: { id },
@@ -17,6 +40,11 @@ export async function POST(
         class: true,
         subject: true,
         topic: true,
+        questions: {
+          include: {
+            question: true,
+          },
+        },
       },
     })
 
@@ -58,12 +86,31 @@ export async function POST(
         video.topic.name
       )
 
-      // Upload to YouTube
+      // Build final description with question content appended
+      const q = video.questions?.[0]?.question
+      const baseDescription = video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`
+      const questionBlock = q
+        ? `\n\nQuestion: ${q.text}\nA) ${q.optionA}\nB) ${q.optionB}\nC) ${q.optionC}\nD) ${q.optionD}\nAnswer: ${q.correctAnswer}\n`
+        : ""
+      const finalDescription = `${baseDescription}${questionBlock}`
+
+      // Upload to YouTube using session tokens with playlist management
       const uploadResult = await uploadToYouTube(
         videoPath,
         video.title,
-        video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`,
-        tags
+        finalDescription,
+        tags,
+        session.accessToken as string,
+        session.refreshToken as string,
+        {
+          playlists: {
+            autoAddToPlaylists: true,
+            className: body.className || video.class.name,
+            subjectName: body.subjectName || video.subject.name,
+            classNumber: (body.className || video.class.name).match(/\d+/)?.[0], // Extract number from class name
+            playlistNamePattern: body.playlistNamePattern, // Allow custom pattern
+          }
+        }
       )
 
       // Update video with YouTube ID

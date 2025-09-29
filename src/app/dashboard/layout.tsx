@@ -81,6 +81,12 @@ export default function DashboardLayout({
                   Videos
                 </Link>
                 <Link
+                  href="/dashboard/youtube"
+                  className={getLinkClasses("/dashboard/youtube")}
+                >
+                  YouTube
+                </Link>
+                <Link
                   href="/dashboard/auto-post"
                   className={getLinkClasses("/dashboard/auto-post")}
                 >

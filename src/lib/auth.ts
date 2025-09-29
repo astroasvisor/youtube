@@ -38,7 +38,7 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
       authorization: {
         params: {
-          scope: "openid email profile https://www.googleapis.com/auth/youtube.upload",
+          scope: "openid email profile https://www.googleapis.com/auth/youtube",
           access_type: "offline",
           prompt: "consent",
         },
@@ -113,7 +113,8 @@ export const authOptions: NextAuthOptions = {
       if (token && session.user) {
         session.user.id = token.sub!
         session.user.role = token.role as string
-        session.accessToken = token.accessToken
+        session.accessToken = token.accessToken as string
+        session.refreshToken = token.refreshToken as string
       }
       return session
     }

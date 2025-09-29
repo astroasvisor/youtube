@@ -268,7 +268,16 @@ export async function POST(request: Request) {
                 video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`,
                 tags,
                 session.accessToken as string,
-                session.refreshToken as string
+                session.refreshToken as string,
+                {
+                  playlists: {
+                    autoAddToPlaylists: true,
+                    className: video.class.name,
+                    subjectName: video.subject.name,
+                    classNumber: video.class.name.match(/\d+/)?.[0], // Extract number from class name
+                    playlistNamePattern: undefined, // Use default pattern
+                  }
+                }
               )
 
               // Update video with YouTube ID
