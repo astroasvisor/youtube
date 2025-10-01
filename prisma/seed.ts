@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import { hash } from 'bcryptjs'
 
-const prisma = new PrismaClient()
+const prisma = new PrismaClient({
+  log: ['error'], // Only log errors during seeding, not queries
+})
 
 async function main() {
   console.log('🌱 Starting database seeding...')

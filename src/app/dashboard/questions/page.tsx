@@ -40,6 +40,18 @@ export default function QuestionsPage() {
     count: 5,
     difficulty: "MEDIUM" as "EASY" | "MEDIUM" | "HARD",
   })
+  const [multiTopicForm, setMultiTopicForm] = useState({
+    classId: "",
+    count: 5,
+    difficulty: "MEDIUM" as "EASY" | "MEDIUM" | "HARD",
+  })
+  const [selectedTopics, setSelectedTopics] = useState<Array<{
+    subjectId: string
+    subjectName: string
+    topicId: string
+    topicName: string
+  }>>([])
+  const [showMultiTopicForm, setShowMultiTopicForm] = useState(false)
   const [generatingVideos, setGeneratingVideos] = useState<Set<string>>(new Set())
   const [videoLogs, setVideoLogs] = useState<Record<string, string[]>>({})
   const [pollingIntervals, setPollingIntervals] = useState<Record<string, NodeJS.Timeout>>({})
@@ -91,6 +103,40 @@ export default function QuestionsPage() {
       }
     } catch (error) {
       console.error("Error fetching classes:", error)
+    }
+  }
+
+  const previewSelectedTopics = async (classId: string) => {
+    if (!classId) {
+      setSelectedTopics([])
+      return
+    }
+
+    try {
+      const response = await fetch("/api/generate-questions-multi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          classId,
+          count: multiTopicForm.count,
+          difficulty: multiTopicForm.difficulty,
+          subjectsPerRun: 4,
+          previewMode: true, // Enable preview mode - no questions will be generated
+        }),
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        // Extract the topics that would be selected for generation
+        if (data.topics && Array.isArray(data.topics)) {
+          setSelectedTopics(data.topics)
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching selected topics:", error)
+      setSelectedTopics([])
     }
   }
 
@@ -185,6 +231,85 @@ export default function QuestionsPage() {
       }
     } catch (error) {
       console.error("Error generating questions:", error)
+      alert("Failed to generate questions")
+    }
+  }
+
+  const handleGenerateMultiTopicQuestions = async () => {
+    if (!multiTopicForm.classId) {
+      alert("Please select a class")
+      return
+    }
+
+    // First, get the topics that would be used (in preview mode)
+    let topics = []
+    try {
+      const previewResponse = await fetch("/api/generate-questions-multi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          classId: multiTopicForm.classId,
+          count: multiTopicForm.count,
+          difficulty: multiTopicForm.difficulty,
+          subjectsPerRun: 4,
+          previewMode: true,
+        }),
+      })
+
+      if (previewResponse.ok) {
+        const previewData = await previewResponse.json()
+        topics = previewData.topics || []
+      }
+    } catch (error) {
+      console.error("Error fetching topics for generation:", error)
+      alert("Failed to fetch topics for generation")
+      return
+    }
+
+    if (topics.length === 0) {
+      alert("No topics available for generation. Please select a different class.")
+      return
+    }
+
+    // Update selected topics for display
+    setSelectedTopics(topics)
+
+    // Reset form after successful generation
+    setMultiTopicForm({
+      classId: "",
+      count: 5,
+      difficulty: "MEDIUM",
+    })
+    setSelectedTopics([])
+    setShowMultiTopicForm(false)
+
+    try {
+      const response = await fetch("/api/generate-questions-multi", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          classId: multiTopicForm.classId,
+          count: multiTopicForm.count,
+          difficulty: multiTopicForm.difficulty,
+          subjectsPerRun: 4,
+          previewMode: false, // Actually generate questions this time
+        }),
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        fetchQuestions()
+        alert(`Generated ${result.totalQuestions} questions across ${result.topics?.length || 0} topics!`)
+      } else {
+        const error = await response.json()
+        alert(`Error: ${error.error}`)
+      }
+    } catch (error) {
+      console.error("Error generating multi-topic questions:", error)
       alert("Failed to generate questions")
     }
   }
@@ -589,6 +714,120 @@ export default function QuestionsPage() {
           </div>
         </div>
       )}
+
+      {/* Multi-Topic Generation Section */}
+      <div className="bg-white p-6 rounded-lg shadow">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Generate Multi-Topic Questions</h2>
+            <p className="text-sm text-gray-600">Generate questions from multiple topics (one per subject) with intelligent topic selection</p>
+          </div>
+          <button
+            onClick={() => setShowMultiTopicForm(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+          >
+            Generate Multi-Topic Questions
+          </button>
+        </div>
+
+        {/* Multi-Topic Generation Modal */}
+        {showMultiTopicForm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 overflow-y-auto h-full w-full z-50">
+            <div className="relative top-20 mx-auto p-6 border w-full max-w-md shadow-xl rounded-lg bg-white">
+              <div className="mt-3">
+                <h3 className="text-xl font-semibold text-gray-900 mb-6">
+                  Generate Multi-Topic Questions
+                </h3>
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Class
+                    </label>
+                    <select
+                      value={multiTopicForm.classId}
+                      onChange={(e) => {
+                        const newClassId = e.target.value
+                        setMultiTopicForm({
+                          ...multiTopicForm,
+                          classId: newClassId,
+                        })
+                        // Clear selected topics when class changes - they will be fetched when Generate is clicked
+                        setSelectedTopics([])
+                      }}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                    >
+                      <option value="" className="text-gray-500">Select Class</option>
+                      {classes.length === 0 ? (
+                        <option value="" disabled>No classes available</option>
+                      ) : (
+                        classes.map((classItem) => (
+                          <option key={classItem.id} value={classItem.id} className="text-gray-900">
+                            {classItem.name}
+                          </option>
+                        ))
+                      )}
+                    </select>
+                  </div>
+
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Number of Questions
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="20"
+                      value={multiTopicForm.count}
+                      onChange={(e) => setMultiTopicForm({ ...multiTopicForm, count: parseInt(e.target.value) || 1 })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Difficulty
+                    </label>
+                    <select
+                      value={multiTopicForm.difficulty}
+                      onChange={(e) => setMultiTopicForm({ ...multiTopicForm, difficulty: e.target.value as "EASY" | "MEDIUM" | "HARD" })}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 bg-white"
+                    >
+                      <option value="EASY" className="text-gray-900">Easy</option>
+                      <option value="MEDIUM" className="text-gray-900">Medium</option>
+                      <option value="HARD" className="text-gray-900">Hard</option>
+                    </select>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={() => {
+                        setShowMultiTopicForm(false)
+                        setMultiTopicForm({
+                          classId: "",
+                          count: 5,
+                          difficulty: "MEDIUM",
+                        })
+                        setSelectedTopics([])
+                      }}
+                      className="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleGenerateMultiTopicQuestions}
+                      className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-md text-sm font-medium transition-colors disabled:cursor-not-allowed"
+                      disabled={!multiTopicForm.classId}
+                    >
+                      Generate Questions
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Questions List */}
       <div className="space-y-4">

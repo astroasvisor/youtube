@@ -147,15 +147,26 @@ registerRoot(() => QuizVideo({ questions, title, subject }))
     const outputPath = path.join(process.cwd(), "public", "videos", video.filename)
     await fs.promises.mkdir(path.dirname(outputPath), { recursive: true })
 
+    // Run Remotion render with environment variable to reduce logging
+    const env = { ...process.env, REMOTION_LOG_LEVEL: 'error' }
+
     const { stdout, stderr } = await execAsync(
       `cd "${process.cwd()}" && npx remotion render "${entryFilePath}" QuizVideo "${outputPath}"`,
-      { timeout: 300000 } // 5 minutes timeout
+      { timeout: 300000, env } // 5 minutes timeout
     )
 
-    console.log("Video generation stdout:", stdout)
-    if (stderr) {
-      console.error("Video generation stderr:", stderr)
+    // Filter out verbose Remotion logs but keep actual errors
+    const filteredStderr = stderr
+      ?.split('\n')
+      .filter(line => !line.includes('Rendered') && !line.includes('Encoded') && !line.includes('time remaining'))
+      .join('\n')
+      .trim()
+
+    if (filteredStderr) {
+      console.error("Video generation stderr:", filteredStderr)
     }
+
+    console.log("Video generation completed successfully")
 
     // Update video status to generated
     await prisma.video.update({

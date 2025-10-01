@@ -58,6 +58,22 @@ export async function POST(request: Request) {
     const savedQuestions = []
     for (const question of questions) {
       try {
+        // Check if question already exists for this topic
+        const existingQuestion = await prisma.question.findUnique({
+          where: {
+            text_topicId: {
+              text: question.text,
+              topicId: topicId,
+            },
+          },
+        })
+
+        if (existingQuestion) {
+          console.log(`Question already exists for topic: ${question.text.substring(0, 50)}...`)
+          savedQuestions.push(existingQuestion)
+          continue
+        }
+
         const savedQuestion = await prisma.question.create({
           data: {
             text: question.text,

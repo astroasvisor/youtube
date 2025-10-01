@@ -26,7 +26,7 @@ export const themes: Record<string, Theme> = {
   },
   chemistry: {
     name: "Chemistry",
-    backgroundGradient: "linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)",
+    backgroundGradient: "linear-gradient(135deg, #1e40af 0%,rgb(140, 59, 246) 100%)",
     primaryColor: "#1e40af",
     secondaryColor: "#3b82f6",
     characterImage: "images/thinking.png",

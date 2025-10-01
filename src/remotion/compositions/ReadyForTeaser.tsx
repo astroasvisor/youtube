@@ -87,55 +87,55 @@ export const ReadyForTeaser: React.FC<{
       }}
     >
       {/* Subject Icons - Much More Visible! */}
-      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Biology" && "🌳"}
       </div>
-      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Biology" && "🍃"}
       </div>
-      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Biology" && "🐾"}
       </div>
-      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "22%", right: "25%", fontSize: "110px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Biology" && "🌸"}
       </div>
 
-      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Physics" && "⚛️"}
       </div>
-      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Physics" && "⚡"}
       </div>
-      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Physics" && "🌊"}
       </div>
-      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "22%", right: "25%", fontSize: "110px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Physics" && "🔬"}
       </div>
 
-      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Chemistry" && "🧪"}
       </div>
-      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Chemistry" && "⚗️"}
       </div>
-      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "22%", left: "20%", fontSize: "90px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Chemistry" && "🧫"}
       </div>
-      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "22%", right: "25%", fontSize: "110px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Chemistry" && "⚛️"}
       </div>
 
-      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "20%", left: "10%", fontSize: "100px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Mathematics" && "📐"}
       </div>
-      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", top: "15%", right: "15%", fontSize: "85px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Mathematics" && "📊"}
       </div>
-      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "25%", left: "20%", fontSize: "90px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Mathematics" && "📈"}
       </div>
-      <div style={{ position: "absolute", bottom: "20%", right: "25%", fontSize: "110px", opacity: 0.9, zIndex: 1 }}>
+      <div style={{ position: "absolute", bottom: "22%", right: "25%", fontSize: "110px", opacity: 0.7, zIndex: 1 }}>
         {theme.name === "Mathematics" && "🔢"}
       </div>
 

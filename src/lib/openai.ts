@@ -14,6 +14,11 @@ export interface GeneratedQuestion {
   explanation: string
 }
 
+// Type for OpenAI response that might contain either a single question or questions array
+type OpenAIResponse = GeneratedQuestion | {
+  questions: GeneratedQuestion[]
+}
+
 export async function generateQuestion(
   className: string,
   subjectName: string,
@@ -21,7 +26,7 @@ export async function generateQuestion(
   difficulty: "EASY" | "MEDIUM" | "HARD" = "MEDIUM"
 ): Promise<GeneratedQuestion> {
   try {
-    const prompt = `Create an engaging multiple-choice question for ${className} ${subjectName} students about "${topicName}" - optimized for YouTube Shorts! It is very important that if more than one question is asked to be generated in one request, then provide enough variety of questions to cover all major aspects of the topic.Please do not send variations of the same question.
+    const prompt = `Create an engaging multiple-choice question for ${className} ${subjectName} students about "${topicName}" - optimized for YouTube Shorts! It is very important that if more than one question is asked to be generated in one request, then provide enough variety of questions to cover all major aspects of the topic. Please do not send variations of the same question.
 
 🎯 YOUTUBE SHORTS OPTIMIZATION:
 - Question must be THEORETICAL only (NO calculations, NO math, NO numbers)
@@ -51,13 +56,16 @@ export async function generateQuestion(
 - Boring definitions or classifications
 - Questions that require deep analysis
 - Avoid sending variations of the same question like in this manner:
-  Variation 1: Why is hydrogen called the 'universal fuel' in stars?
-  Variation 2: Why is hydrogen called the 'fuel of the future'?
+  Variation 1: Why is conserving biodiversity like protecting a giant jigsaw puzzle?
+  Variation 2: Why is protecting biodiversity like saving a giant puzzle?
 
 ✅ EXAMPLES OF GOOD QUESTIONS:
 - "What makes leaves green?" (not "Calculate chlorophyll absorption")
 - "Why do we see rainbows?" (not "Solve for prism refraction angle")
 - "Which planet has rings?" (not "Calculate orbital mechanics")
+- When more than one question is asked to be generated in one request, then provide enough variety of questions to cover all major aspects of the topic. For example,
+  Question 1: Why is protecting biodiversity like saving a giant puzzle?
+  Question 2: Which region of the Earth is known for the maximum biodiversity?
 
 You MUST respond with valid JSON in exactly this format:
 {
@@ -73,7 +81,7 @@ You MUST respond with valid JSON in exactly this format:
 Do not include any other text, markdown, or formatting. Just the JSON object.`
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4.1-mini", // gpt-3.5-turbo is too old. currently the most advanced model for our task is gpt-4.1-mini
+      model: "gpt-4o-mini", // gpt-3.5-turbo is too old. currently the most advanced model for our task is gpt-4o-mini
       messages: [
         {
           role: "system",
@@ -99,15 +107,29 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
     // Remove any markdown code block markers
     cleanedContent = cleanedContent.replace(/```json\s*/g, '').replace(/```\s*$/g, '')
 
-    // Try to extract JSON if it's wrapped in other text
-    const jsonMatch = cleanedContent.match(/\{[\s\S]*\}/)
-    if (jsonMatch) {
-      cleanedContent = jsonMatch[0]
+    // Handle multiple JSON objects - OpenAI sometimes returns multiple objects
+    // Split by lines and find individual JSON objects
+    const jsonObjectRegex = /\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g
+    const jsonMatches = cleanedContent.match(jsonObjectRegex)
+    
+    if (jsonMatches && jsonMatches.length > 0) {
+      // Take the first valid JSON object
+      cleanedContent = jsonMatches[0]
+      
+      if (jsonMatches.length > 1) {
+        console.warn(`OpenAI returned ${jsonMatches.length} JSON objects, using the first one`)
+      }
+    } else {
+      // Fallback to original logic
+      const jsonMatch = cleanedContent.match(/\{[\s\S]*?\}/)
+      if (jsonMatch) {
+        cleanedContent = jsonMatch[0]
+      }
     }
 
-    let parsed: GeneratedQuestion
+    let parsed: OpenAIResponse
     try {
-      parsed = JSON.parse(cleanedContent) as GeneratedQuestion
+      parsed = JSON.parse(cleanedContent) as OpenAIResponse
     } catch (parseError) {
       console.error("JSON parse error:", parseError)
       console.error("Raw content:", content)
@@ -124,7 +146,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
         // Fix missing commas after values
         fixedContent = fixedContent.replace(/([a-zA-Z0-9"])\s*"/g, '$1", "')
 
-        parsed = JSON.parse(fixedContent) as GeneratedQuestion
+        parsed = JSON.parse(fixedContent) as OpenAIResponse
         console.log("Successfully parsed after fixing JSON")
       } catch (fixError) {
         console.error("Failed to fix JSON:", fixError)
@@ -132,32 +154,53 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
       }
     }
 
-    // Validate the response
-    if (!parsed.text || !parsed.optionA || !parsed.optionB || !parsed.optionC || !parsed.optionD || !parsed.correctAnswer || !parsed.explanation) {
+    // Handle both single question and questions array formats
+    let questionData: GeneratedQuestion
+
+    if ('questions' in parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
+      // OpenAI returned a questions array - take the first question
+      console.log(`OpenAI returned ${parsed.questions.length} questions, using the first one`)
+      questionData = parsed.questions[0]
+
+      // Validate that the first question has all required fields
+      if (!questionData.text || !questionData.optionA || !questionData.optionB || !questionData.optionC || !questionData.optionD || !questionData.correctAnswer || !questionData.explanation) {
+        console.error("Invalid question structure in questions array:", questionData)
+        throw new Error("Invalid response format from OpenAI - missing required fields in questions array")
+      }
+    } else if ('text' in parsed && 'optionA' in parsed && 'optionB' in parsed && 'optionC' in parsed && 'optionD' in parsed && 'correctAnswer' in parsed && 'explanation' in parsed) {
+      // OpenAI returned a single question object
+      questionData = parsed as GeneratedQuestion
+    } else {
       console.error("Invalid response structure:", parsed)
       throw new Error("Invalid response format from OpenAI - missing required fields")
     }
 
-    if (!["A", "B", "C", "D"].includes(parsed.correctAnswer)) {
-      throw new Error(`Invalid correct answer format: ${parsed.correctAnswer}`)
+    // Validate the response
+    if (!questionData.text || !questionData.optionA || !questionData.optionB || !questionData.optionC || !questionData.optionD || !questionData.correctAnswer || !questionData.explanation) {
+      console.error("Invalid response structure:", questionData)
+      throw new Error("Invalid response format from OpenAI - missing required fields")
+    }
+
+    if (!["A", "B", "C", "D"].includes(questionData.correctAnswer)) {
+      throw new Error(`Invalid correct answer format: ${questionData.correctAnswer}`)
     }
 
     // YouTube Shorts specific validation
     // Ensure question is concise (under 100 characters for YouTube Shorts)
-    if (parsed.text.length > 100) {
-      console.warn(`Question text is too long for Shorts (${parsed.text.length} chars): ${parsed.text}`)
+    if (questionData.text.length > 100) {
+      console.warn(`Question text is too long for Shorts (${questionData.text.length} chars): ${questionData.text}`)
     }
 
     // Check if explanation is engaging and not too technical
-    const explanationWords = parsed.explanation.toLowerCase()
+    const explanationWords = questionData.explanation.toLowerCase()
     const technicalTerms = ['therefore', 'hence', 'consequently', 'furthermore', 'moreover', 'whereas', 'nonetheless']
     const hasTechnicalTerms = technicalTerms.some(term => explanationWords.includes(term))
 
-    if (hasTechnicalTerms && parsed.explanation.length > 120) {
-      console.warn(`Explanation might be too technical for Shorts: ${parsed.explanation}`)
+    if (hasTechnicalTerms && questionData.explanation.length > 120) {
+      console.warn(`Explanation might be too technical for Shorts: ${questionData.explanation}`)
     }
 
-    return parsed
+    return questionData
   } catch (error) {
     console.error("Error generating question:", error)
     throw new Error("Failed to generate question")
