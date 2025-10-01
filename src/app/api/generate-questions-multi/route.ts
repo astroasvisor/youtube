@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { generateQuestions } from "@/lib/openai"
+import { generateQuestionsForTopics } from "@/lib/question-generation"
 import { prisma } from "@/lib/prisma"
 import { selectTopicsForVideoGeneration } from "@/lib/topic-selection"
 import { Difficulty } from "@prisma/client"
@@ -64,95 +64,85 @@ export async function POST(request: Request) {
       })
     }
 
-    const savedQuestions = []
-    const topicResults = []
+    const questionsPerTopic = Math.ceil(count / selectedTopics.length)
+    const allGeneratedQuestions = await generateQuestionsForTopics(
+      classData.name,
+      difficulty,
+      selectedTopics.map(t => ({ id: t.topicId, name: t.topicName, subjectName: t.subjectName })),
+      questionsPerTopic
+    )
 
-    // Generate questions for each selected topic
-    for (const topic of selectedTopics) {
+    const savedQuestions = []
+    const topicResults = selectedTopics.map(t => ({
+      topicId: t.topicId,
+      topicName: t.topicName,
+      subjectName: t.subjectName,
+      questionsGenerated: 0,
+      questionsSaved: 0,
+    }))
+
+    for (const question of allGeneratedQuestions) {
       try {
-        // Verify the topic still exists and is valid
-        const topicData = await prisma.topic.findUnique({
-          where: { id: topic.topicId },
-          include: {
-            subject: {
-              include: {
-                class: true,
-              },
+        if (!question.topicId) {
+          console.warn("Generated question is missing topicId, skipping:", question)
+          continue
+        }
+
+        // Check if question already exists for this topic
+        const existingQuestion = await prisma.question.findUnique({
+          where: {
+            text_topicId: {
+              text: question.text,
+              topicId: question.topicId,
             },
           },
         })
 
-        if (!topicData) {
-          console.warn(`Topic ${topic.topicId} not found, skipping`)
+        if (existingQuestion) {
+          console.log(`Question already exists for topic ${question.topicId}: ${question.text.substring(0, 50)}...`)
           continue
         }
 
-        // Generate questions for this topic
-        const questions = await generateQuestions(
-          topicData.subject.class.name,
-          topicData.subject.name,
-          topicData.name,
-          Math.ceil(count / selectedTopics.length), // Distribute questions across topics
-          difficulty
-        )
+        const savedQuestion = await prisma.question.create({
+          data: {
+            text: question.text,
+            optionA: question.optionA,
+            optionB: question.optionB,
+            optionC: question.optionC,
+            optionD: question.optionD,
+            correctAnswer: question.correctAnswer,
+            explanation: question.explanation,
+            difficulty: difficulty as Difficulty,
+            status: "APPROVED",
+            topicId: question.topicId,
+          },
+        })
+        savedQuestions.push(savedQuestion)
 
-        // Save questions to database
-        const topicSavedQuestions = []
-        for (const question of questions) {
-          try {
-            // Check if question already exists for this topic
-            const existingQuestion = await prisma.question.findUnique({
-              where: {
-                text_topicId: {
-                  text: question.text,
-                  topicId: topic.topicId,
-                },
-              },
-            })
-
-            if (existingQuestion) {
-              console.log(`Question already exists for topic ${topic.topicName}: ${question.text.substring(0, 50)}...`)
-              topicSavedQuestions.push(existingQuestion)
-              continue
-            }
-
-            const savedQuestion = await prisma.question.create({
-              data: {
-                text: question.text,
-                optionA: question.optionA,
-                optionB: question.optionB,
-                optionC: question.optionC,
-                optionD: question.optionD,
-                correctAnswer: question.correctAnswer,
-                explanation: question.explanation,
-                difficulty: difficulty as Difficulty,
-                status: "APPROVED",
-                topicId: topic.topicId,
-              },
-            })
-            topicSavedQuestions.push(savedQuestion)
-          } catch (error) {
-            console.error("Error saving question:", error)
-            // Continue with other questions even if one fails to save
-          }
+        // Update topic results
+        const topicResult = topicResults.find(t => t.topicId === question.topicId)
+        if (topicResult) {
+          topicResult.questionsSaved++
         }
 
-        savedQuestions.push(...topicSavedQuestions)
-        topicResults.push({
-          topicId: topic.topicId,
-          topicName: topic.topicName,
-          subjectName: topic.subjectName,
-          questionsGenerated: topicSavedQuestions.length,
-        })
-
       } catch (error) {
-        console.error(`Error generating questions for topic ${topic.topicName}:`, error)
-        // Continue with other topics even if one fails
+        console.error("Error saving question:", error)
+        // Continue with other questions even if one fails to save
       }
     }
 
+    // Update generated count
+    allGeneratedQuestions.forEach(q => {
+      if (q.topicId) {
+        const topicResult = topicResults.find(t => t.topicId === q.topicId)
+        if (topicResult) {
+          topicResult.questionsGenerated++
+        }
+      }
+    })
+
     return NextResponse.json({
-      message: `Generated ${savedQuestions.length} questions across ${topicResults.length} topics`,
+      message: `Generated ${allGeneratedQuestions.length} questions and saved ${savedQuestions.length} new questions across ${topicResults.length} topics`,
       topics: topicResults,
       questions: savedQuestions,
       totalQuestions: savedQuestions.length,

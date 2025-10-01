@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { generateQuestions } from "@/lib/openai"
+import { generateQuestions } from "@/lib/question-generation"
 import { prisma } from "@/lib/prisma"
 import { Difficulty } from "@prisma/client"
 
