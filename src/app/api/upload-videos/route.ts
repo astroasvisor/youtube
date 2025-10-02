@@ -138,7 +138,7 @@ export async function POST(request: Request) {
               const q = video.questions?.[0]?.question
               const baseDescription = video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`
               const questionBlock = q
-                ? `\n\nQuestion: ${q.text}\nA) ${q.optionA}\nB) ${q.optionB}\nC) ${q.optionC}\nD) ${q.optionD}\nAnswer: ${q.correctAnswer}\n`
+                ? `\n\nQuestion: ${q.text}\nA) ${q.optionA}\nB) ${q.optionB}\nC) ${q.optionC}\nD) ${q.optionD}\n\nAnswer: ${q.correctAnswer}\n\nExplanation: ${q.explanation}\n`
                 : ""
               const finalDescription = `${baseDescription}${questionBlock}`
 

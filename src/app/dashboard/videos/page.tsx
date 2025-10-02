@@ -74,7 +74,7 @@ export default function VideosPage() {
       if (response.ok) {
         const result = await response.json()
         fetchVideos() // Refresh the video list
-        alert(`✅ Video regeneration started successfully!\n\nNew video ID: ${result.newVideo.id}\nOld video will be replaced once generation completes.`)
+        alert(`✅ Video regeneration started successfully!\n\nVideo "${result.video.title}" is being regenerated.\nThe same video entry will be updated once generation completes.`)
       } else {
         const error = await response.json()
         alert(`❌ Regeneration failed: ${error.error}`)

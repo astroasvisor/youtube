@@ -1,7 +1,7 @@
-import { openai, GeneratedQuestion } from "./openai"
+import { openai, GeneratedQuestion, GeneratedQuestionWithMetadata } from "./openai"
 
-type OpenAIResponse = GeneratedQuestion | {
-  questions: GeneratedQuestion[]
+type OpenAIResponse = GeneratedQuestion | GeneratedQuestionWithMetadata | {
+  questions: GeneratedQuestion[] | GeneratedQuestionWithMetadata[]
 }
 
 export type QuestionMode = "BASIC" | "ADVANCED"
@@ -85,7 +85,7 @@ function getPromptTemplate(
 }
 
 /**
- * Generate a single question for a specific topic
+ * Generate a single question for a specific topic with SEO-optimized video metadata
  * 
  * @deprecated Consider using generateQuestionsForSingleTopic for better efficiency
  * This function is kept for backward compatibility and edge cases
@@ -95,7 +95,7 @@ function getPromptTemplate(
  * @param topicName - The topic name (e.g., "Gravity", "Photosynthesis")
  * @param difficulty - Question difficulty level
  * @param mode - Question mode: BASIC (YouTube Shorts) or ADVANCED (NEET/JEE prep)
- * @returns A single generated question
+ * @returns A single generated question with video title and description
  */
 export async function generateQuestion(
   className: string,
@@ -103,7 +103,7 @@ export async function generateQuestion(
   topicName: string,
   difficulty: "EASY" | "MEDIUM" | "HARD" = "MEDIUM",
   mode: QuestionMode = "BASIC"
-): Promise<GeneratedQuestion> {
+): Promise<GeneratedQuestionWithMetadata> {
   try {
     const promptTemplate = getPromptTemplate(mode, difficulty)
     const modeDescription = mode === "BASIC" 
@@ -130,8 +130,36 @@ ${mode === "BASIC" ? `
 - "How does Le Chatelier's principle apply when pressure is increased in a gaseous equilibrium?"
 `}
 
+🎬 VIDEO METADATA (SEO-OPTIMIZED):
+For each question, also provide:
+1. VIDEO TITLE: 30-60 characters, engaging and clickable
+   - Use curiosity-driven language
+   - Include relevant emojis (1-2 max)
+   - Make it search-friendly (include topic keywords)
+   - Examples: "Mind-Blowing Physics Fact! 🤯" or "Chemistry Secret Revealed! ⚗️"
+
+2. VIDEO DESCRIPTION: Comprehensive and informative (400-800 characters)
+   Structure the description as follows:
+   
+   a) HOOK (1-2 sentences): Start with an engaging question or statement related to the quiz
+   
+   b) TOPIC CONTEXT (1 paragraph, 3-5 sentences):
+      - Brief introduction to the topic
+      - Why this topic is important for NEET/JEE preparation (if applicable)
+      - Basic definitions or key concepts
+      - Real-world relevance or applications
+      - This paragraph should be educational and valuable for viewers to read
+   
+   c) CALL TO ACTION (1 sentence): Encourage engagement and mention the class level
+   
+   d) HASHTAGS: Include 5-8 relevant hashtags for discoverability
+   
+   Example structure: "[Hook] [Educational paragraph about topic importance and basics] [Call to action] [Hashtags]"
+
 You MUST respond with valid JSON in exactly this format:
 {
+  "videoTitle": "Why Are Plants Green? 🌱",
+  "videoDescription": "Ever wondered what makes plants green? Photosynthesis is one of the most fundamental processes in biology, essential for understanding how life sustains itself on Earth. This topic is crucial for NEET and JEE Biology sections, where questions often test conceptual clarity on light reactions, chlorophyll's role, and energy conversion. Photosynthesis is the process by which plants convert light energy into chemical energy, using chlorophyll pigments in chloroplasts. Understanding this mechanism helps explain food chains, ecosystems, and the oxygen cycle that supports all aerobic life. Perfect for ${className} ${subjectName} students - test your knowledge and ace your exams! 🎓 #Photosynthesis #Biology #${className.replace(' ', '')} #NEET #JEE #Education #ScienceQuiz #ExamPrep",
   "text": "What makes plants green and helps them make food?",
   "optionA": "Sunlight",
   "optionB": "Chlorophyll",
@@ -156,7 +184,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
         }
       ],
       temperature: mode === "BASIC" ? 0.7 : 0.6, // Slightly lower temperature for advanced mode
-      max_tokens: mode === "BASIC" ? 1000 : 1500, // More tokens for detailed explanations
+      max_tokens: mode === "BASIC" ? 1500 : 2000, // More tokens for detailed explanations and comprehensive descriptions
     })
 
     const content = response.choices[0]?.message?.content
@@ -211,18 +239,18 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
     }
 
     // Handle both single question and questions array formats
-    let questionData: GeneratedQuestion
+    let questionData: GeneratedQuestionWithMetadata
 
     if ('questions' in parsed && Array.isArray(parsed.questions) && parsed.questions.length > 0) {
       console.log(`OpenAI returned ${parsed.questions.length} questions, using the first one`)
-      questionData = parsed.questions[0]
+      questionData = parsed.questions[0] as GeneratedQuestionWithMetadata
 
       if (!questionData.text || !questionData.optionA || !questionData.optionB || !questionData.optionC || !questionData.optionD || !questionData.correctAnswer || !questionData.explanation) {
         console.error("Invalid question structure in questions array:", questionData)
         throw new Error("Invalid response format from OpenAI - missing required fields in questions array")
       }
     } else if ('text' in parsed && 'optionA' in parsed && 'optionB' in parsed && 'optionC' in parsed && 'optionD' in parsed && 'correctAnswer' in parsed && 'explanation' in parsed) {
-      questionData = parsed as GeneratedQuestion
+      questionData = parsed as GeneratedQuestionWithMetadata
     } else {
       console.error("Invalid response structure:", parsed)
       throw new Error("Invalid response format from OpenAI - missing required fields")
@@ -236,6 +264,19 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
 
     if (!["A", "B", "C", "D"].includes(questionData.correctAnswer)) {
       throw new Error(`Invalid correct answer format: ${questionData.correctAnswer}`)
+    }
+
+    // Validate video metadata (optional but recommended)
+    if (questionData.videoTitle && questionData.videoTitle.length > 100) {
+      console.warn(`Video title is too long (${questionData.videoTitle.length} chars), YouTube limit is 100`)
+    }
+
+    if (questionData.videoDescription && questionData.videoDescription.length < 400) {
+      console.warn(`Video description is shorter than recommended (${questionData.videoDescription.length} chars), aim for 400-800 characters for better engagement`)
+    }
+
+    if (questionData.videoDescription && questionData.videoDescription.length > 5000) {
+      console.warn(`Video description is too long (${questionData.videoDescription.length} chars), YouTube limit is 5000`)
     }
 
     // Mode-specific validation
@@ -262,7 +303,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
 }
 
 /**
- * Generate multiple questions about a SINGLE topic using batch API call
+ * Generate multiple questions about a SINGLE topic using batch API call with SEO metadata
  * This is more efficient than calling generateQuestion() multiple times
  * 
  * USE THIS WHEN: You want multiple questions all about the same topic
@@ -274,7 +315,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
  * @param count - Number of questions to generate
  * @param difficulty - Question difficulty level
  * @param mode - Question mode: BASIC (YouTube Shorts) or ADVANCED (NEET/JEE prep)
- * @returns Array of generated questions, all about the same topic
+ * @returns Array of generated questions with video metadata, all about the same topic
  */
 export async function generateQuestionsForSingleTopic(
   className: string,
@@ -283,7 +324,7 @@ export async function generateQuestionsForSingleTopic(
   count: number = 5,
   difficulty: "EASY" | "MEDIUM" | "HARD" = "MEDIUM",
   mode: QuestionMode = "BASIC"
-): Promise<GeneratedQuestion[]> {
+): Promise<GeneratedQuestionWithMetadata[]> {
   try {
     const promptTemplate = getPromptTemplate(mode, difficulty)
     const modeDescription = mode === "BASIC" 
@@ -318,10 +359,38 @@ For "Photosynthesis" topic:
 - Question 5: "Why is cyclic photophosphorylation important for plant cells?"
 `}
 
+🎬 VIDEO METADATA (SEO-OPTIMIZED):
+For EACH question, also provide:
+1. VIDEO TITLE: 30-60 characters, engaging and clickable
+   - Use curiosity-driven language
+   - Include relevant emojis (1-2 max)
+   - Make it search-friendly (include topic keywords)
+   - Make each title UNIQUE and specific to the question
+
+2. VIDEO DESCRIPTION: Comprehensive and informative (400-800 characters)
+   Structure EACH description as follows:
+   
+   a) HOOK (1-2 sentences): Start with an engaging question or statement related to the specific quiz
+   
+   b) TOPIC CONTEXT (1 paragraph, 3-5 sentences):
+      - Brief introduction to the specific aspect of the topic being tested
+      - Why this concept is important for NEET/JEE preparation (if applicable)
+      - Basic definitions or key concepts related to this question
+      - Real-world relevance or applications
+      - This paragraph should be educational and valuable for viewers to read
+   
+   c) CALL TO ACTION (1 sentence): Encourage engagement and mention the class level
+   
+   d) HASHTAGS: Include 5-8 relevant hashtags for discoverability
+   
+   Make each description UNIQUE and specifically tailored to the individual question's focus area.
+
 You MUST respond with valid JSON in this exact format:
 {
   "questions": [
     {
+      "videoTitle": "Why Are Plants Green? 🌱",
+      "videoDescription": "Ever wondered what makes plants green? Photosynthesis is one of the most fundamental processes in biology, essential for understanding how life sustains itself on Earth. This topic is crucial for NEET and JEE Biology sections, where questions often test conceptual clarity on light reactions, chlorophyll's role, and energy conversion. Photosynthesis is the process by which plants convert light energy into chemical energy, using chlorophyll pigments in chloroplasts. Understanding this mechanism helps explain food chains, ecosystems, and the oxygen cycle that supports all aerobic life. Perfect for ${className} ${subjectName} students - test your knowledge and ace your exams! 🎓 #Photosynthesis #Biology #${className.replace(' ', '')} #NEET #JEE #Education #ScienceQuiz #ExamPrep",
       "text": "What makes plants green and helps them make food?",
       "optionA": "Sunlight",
       "optionB": "Chlorophyll",
@@ -349,7 +418,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object wit
       ],
       response_format: { type: "json_object" },
       temperature: mode === "BASIC" ? 0.7 : 0.6,
-      max_tokens: mode === "BASIC" ? 3000 : 4096,
+      max_tokens: mode === "BASIC" ? 4000 : 5000, // Increased for comprehensive descriptions
     })
 
     const content = response.choices[0]?.message?.content
@@ -357,7 +426,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object wit
       throw new Error("No response from OpenAI")
     }
 
-    const parsed: { questions: GeneratedQuestion[] } = JSON.parse(content)
+    const parsed: { questions: GeneratedQuestionWithMetadata[] } = JSON.parse(content)
 
     if (!parsed.questions || !Array.isArray(parsed.questions)) {
       throw new Error("Invalid response format from OpenAI - missing 'questions' array")
@@ -373,9 +442,24 @@ Do not include any other text, markdown, or formatting. Just the JSON object wit
       if (!["A", "B", "C", "D"].includes(question.correctAnswer)) {
         throw new Error(`Invalid correct answer format: ${question.correctAnswer}`)
       }
+
+      // Validate video metadata (warn if missing or invalid)
+      if (!question.videoTitle) {
+        console.warn(`Question missing videoTitle: ${question.text.substring(0, 50)}...`)
+      } else if (question.videoTitle.length > 100) {
+        console.warn(`Video title too long (${question.videoTitle.length} chars): ${question.videoTitle}`)
+      }
+
+      if (!question.videoDescription) {
+        console.warn(`Question missing videoDescription: ${question.text.substring(0, 50)}...`)
+      } else if (question.videoDescription.length < 400) {
+        console.warn(`Video description shorter than recommended (${question.videoDescription.length} chars), aim for 400-800 characters`)
+      } else if (question.videoDescription.length > 5000) {
+        console.warn(`Video description too long (${question.videoDescription.length} chars)`)
+      }
     }
 
-    console.log(`Successfully generated ${parsed.questions.length} questions (${mode} mode) for topic: ${topicName}`)
+    console.log(`Successfully generated ${parsed.questions.length} questions (${mode} mode) with SEO metadata for topic: ${topicName}`)
     return parsed.questions
   } catch (error) {
     console.error("Error generating questions for single topic:", error)
@@ -384,7 +468,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object wit
 }
 
 /**
- * Generate questions across MULTIPLE topics (one or more questions per topic)
+ * Generate questions across MULTIPLE topics (one or more questions per topic) with SEO metadata
  * This efficiently generates questions for different topics in a single API call
  * 
  * USE THIS WHEN: You want questions across different topics/subjects
@@ -395,7 +479,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object wit
  * @param topics - Array of topics with their details
  * @param questionsPerTopic - Number of questions to generate per topic
  * @param mode - Question mode: BASIC (YouTube Shorts) or ADVANCED (NEET/JEE prep)
- * @returns Array of generated questions with topicId association
+ * @returns Array of generated questions with topicId association and video metadata
  */
 export async function generateQuestionsForMultipleTopics(
   className: string,
@@ -403,7 +487,7 @@ export async function generateQuestionsForMultipleTopics(
   topics: Array<{ id: string, name: string, subjectName: string }>,
   questionsPerTopic: number,
   mode: QuestionMode = "BASIC"
-): Promise<GeneratedQuestion[]> {
+): Promise<GeneratedQuestionWithMetadata[]> {
   try {
     const promptTemplate = getPromptTemplate(mode, difficulty)
     const modeDescription = mode === "BASIC" 
@@ -431,11 +515,36 @@ ${promptTemplate.avoid}
 
 You MUST respond with a valid JSON object with a single "questions" key, containing an array of question objects. Each question object must include a "topicId" that corresponds to the topic it belongs to.
 
+🎬 VIDEO METADATA (SEO-OPTIMIZED):
+For EACH question, also provide:
+1. VIDEO TITLE: 30-60 characters, engaging and clickable
+   - Use curiosity-driven language with relevant emojis
+   - Make each title UNIQUE and specific to the question
+
+2. VIDEO DESCRIPTION: Comprehensive and informative (400-800 characters)
+   Structure EACH description as follows:
+   
+   a) HOOK (1-2 sentences): Engaging question or statement
+   
+   b) TOPIC CONTEXT (1 paragraph, 3-5 sentences):
+      - Brief introduction to the topic/concept
+      - Importance for NEET/JEE preparation (if applicable)
+      - Basic definitions or key concepts
+      - Real-world relevance or applications
+   
+   c) CALL TO ACTION (1 sentence): Encourage engagement
+   
+   d) HASHTAGS: Include 5-8 relevant hashtags
+   
+   Make each description UNIQUE and educational.
+
 Example format:
 {
   "questions": [
     {
       "topicId": "physics-topic-1",
+      "videoTitle": "Why Are Plants Green? 🌱",
+      "videoDescription": "Ever wondered what makes plants green? Photosynthesis is one of the most fundamental processes in biology, essential for understanding how life sustains itself on Earth. This topic is crucial for NEET and JEE Biology sections, where questions often test conceptual clarity on light reactions, chlorophyll's role, and energy conversion. Photosynthesis is the process by which plants convert light energy into chemical energy, using chlorophyll pigments in chloroplasts. Understanding this mechanism helps explain food chains, ecosystems, and the oxygen cycle that supports all aerobic life. Perfect for ${className} Biology students - test your knowledge and ace your exams! 🎓 #Photosynthesis #Biology #${className.replace(' ', '')} #NEET #JEE #Education #ScienceQuiz #ExamPrep",
       "text": "What makes plants green and helps them make food?",
       "optionA": "Sunlight",
       "optionB": "Chlorophyll",
@@ -463,7 +572,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
       ],
       response_format: { type: "json_object" },
       temperature: mode === "BASIC" ? 0.7 : 0.6,
-      max_tokens: 4096,
+      max_tokens: 5000, // Increased for comprehensive descriptions across multiple topics
     })
 
     const content = response.choices[0]?.message?.content
@@ -471,7 +580,7 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
       throw new Error("No response from OpenAI")
     }
 
-    const parsed: { questions: GeneratedQuestion[] } = JSON.parse(content)
+    const parsed: { questions: GeneratedQuestionWithMetadata[] } = JSON.parse(content)
 
     if (!parsed.questions || !Array.isArray(parsed.questions)) {
       throw new Error("Invalid response format from OpenAI - missing 'questions' array.")
@@ -487,9 +596,24 @@ Do not include any other text, markdown, or formatting. Just the JSON object.`
         console.error("Received question with unknown topicId:", question)
         throw new Error(`Invalid topicId in response: ${question.topicId}`)
       }
+
+      // Validate video metadata (warn if missing or invalid)
+      if (!question.videoTitle) {
+        console.warn(`Question missing videoTitle: ${question.text.substring(0, 50)}...`)
+      } else if (question.videoTitle.length > 100) {
+        console.warn(`Video title too long (${question.videoTitle.length} chars): ${question.videoTitle}`)
+      }
+
+      if (!question.videoDescription) {
+        console.warn(`Question missing videoDescription: ${question.text.substring(0, 50)}...`)
+      } else if (question.videoDescription.length < 400) {
+        console.warn(`Video description shorter than recommended (${question.videoDescription.length} chars), aim for 400-800 characters`)
+      } else if (question.videoDescription.length > 5000) {
+        console.warn(`Video description too long (${question.videoDescription.length} chars)`)
+      }
     }
 
-    console.log(`Successfully generated ${parsed.questions.length} questions (${mode} mode) across ${topics.length} topics`)
+    console.log(`Successfully generated ${parsed.questions.length} questions (${mode} mode) with SEO metadata across ${topics.length} topics`)
     return parsed.questions
   } catch (error) {
     console.error("Error generating questions for multiple topics:", error)
@@ -510,10 +634,10 @@ export async function generateQuestions(
   count: number = 5,
   difficulty: "EASY" | "MEDIUM" | "HARD" = "MEDIUM",
   mode: QuestionMode = "BASIC"
-): Promise<GeneratedQuestion[]> {
+): Promise<GeneratedQuestionWithMetadata[]> {
   console.warn('generateQuestions() is deprecated. Use generateQuestionsForSingleTopic() for better performance.')
   
-  const questions: GeneratedQuestion[] = []
+  const questions: GeneratedQuestionWithMetadata[] = []
 
   for (let i = 0; i < count; i++) {
     try {

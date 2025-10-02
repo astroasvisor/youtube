@@ -263,10 +263,17 @@ export async function POST(request: Request) {
                 throw new Error("YouTube authentication tokens not available. Please sign in with Google.")
               }
 
+              // Build final description with question content appended
+              const baseDescription = video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`
+              const questionBlock = question
+                ? `\n\nQuestion: ${question.text}\nA) ${question.optionA}\nB) ${question.optionB}\nC) ${question.optionC}\nD) ${question.optionD}\n\nAnswer: ${question.correctAnswer}\n\nExplanation: ${question.explanation}\n`
+                : ""
+              const finalDescription = `${baseDescription}${questionBlock}`
+
               const uploadResult = await uploadToYouTube(
                 videoPath,
                 video.title,
-                video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`,
+                finalDescription,
                 tags,
                 session.accessToken as string,
                 session.refreshToken as string,

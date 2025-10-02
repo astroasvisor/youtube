@@ -115,6 +115,8 @@ export async function POST(request: Request) {
             explanation: question.explanation,
             difficulty: difficulty as Difficulty,
             status: "APPROVED",
+            suggestedVideoTitle: question.videoTitle, // Save SEO-optimized title
+            suggestedVideoDesc: question.videoDescription, // Save SEO-optimized description
             topicId: question.topicId,
           },
         })

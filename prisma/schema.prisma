@@ -93,21 +93,23 @@ model Topic {
 }
 
 model Question {
-  id            String          @id @default(cuid())
-  text          String
-  optionA       String
-  optionB       String
-  optionC       String
-  optionD       String
-  correctAnswer String
-  explanation   String
-  difficulty    Difficulty      @default(MEDIUM)
-  status        QuestionStatus  @default(APPROVED)
-  topicId       String
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  topic         Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  usages        QuestionUsage[]
+  id                   String          @id @default(cuid())
+  text                 String
+  optionA              String
+  optionB              String
+  optionC              String
+  optionD              String
+  correctAnswer        String
+  explanation          String
+  difficulty           Difficulty      @default(MEDIUM)
+  status               QuestionStatus  @default(APPROVED)
+  suggestedVideoTitle  String?         // AI-generated SEO-optimized video title
+  suggestedVideoDesc   String?         // AI-generated SEO-optimized video description
+  topicId              String
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+  topic                Topic           @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  usages               QuestionUsage[]
 
   @@unique([text, topicId])
 }

@@ -75,16 +75,14 @@ export async function POST(
     // Get subject name for theming
     const subjectName = questions[0].topic.subject.name
 
-    // Create new video record (keeping the same title and description)
-    const newVideo = await prisma.video.create({
+    // Update existing video record with new filename and reset status
+    const updatedVideo = await prisma.video.update({
+      where: { id: videoId },
       data: {
-        title: existingVideo.title,
-        description: existingVideo.description,
         filename: `${Date.now()}.mp4`,
         status: "GENERATING",
-        classId: existingVideo.classId,
-        subjectId: existingVideo.subjectId,
-        topicId: existingVideo.topicId,
+        updatedAt: new Date(),
+        // Keep existing title, description, classId, subjectId, topicId
       },
       include: {
         class: true,
@@ -93,28 +91,19 @@ export async function POST(
       },
     })
 
-    // Create question usage records for the new video
-    await prisma.questionUsage.createMany({
-      data: questions.map((question) => ({
-        questionId: question.id,
-        videoId: newVideo.id,
-      })),
-    })
-
-    // Generate video using Remotion (in background)
-    generateVideoWithRemotion(newVideo, questions, subjectName).catch((error) => {
+    // Generate video using Remotion (in background) - using existing video record
+    generateVideoWithRemotion(updatedVideo, questions, subjectName).catch((error) => {
       console.error("Error regenerating video:", error)
-      // Update new video status to failed
+      // Update video status to failed
       prisma.video.update({
-        where: { id: newVideo.id },
+        where: { id: videoId },
         data: { status: "FAILED" },
       }).catch(console.error)
     })
 
     return NextResponse.json({
       message: "Video regeneration started",
-      newVideo,
-      oldVideoId: videoId,
+      video: updatedVideo,
     })
   } catch (error) {
     console.error("Error regenerating video:", error)

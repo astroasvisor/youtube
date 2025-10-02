@@ -20,12 +20,7 @@ export async function POST(request: Request) {
       )
     }
 
-    if (!title || typeof title !== "string") {
-      return NextResponse.json(
-        { error: "Video title is required" },
-        { status: 400 }
-      )
-    }
+    // Title is now optional - will use suggested title from question if not provided
 
     // Get questions with topic information
     const questions = await prisma.question.findMany({
@@ -56,11 +51,15 @@ export async function POST(request: Request) {
     // Get subject name for theming
     const subjectName = questions[0].topic.subject.name
 
+    // Use suggested video title/description from the first question if not provided
+    const videoTitle = title || questions[0].suggestedVideoTitle || `Quiz: ${questions[0].topic.name}`
+    const videoDescription = description || questions[0].suggestedVideoDesc || `Educational quiz about ${questions[0].topic.name} for ${questions[0].topic.subject.class.name} ${questions[0].topic.subject.name} students.`
+
     // Create video record
     const video = await prisma.video.create({
       data: {
-        title,
-        description,
+        title: videoTitle,
+        description: videoDescription,
         filename: `${Date.now()}.mp4`,
         status: "GENERATING",
         classId: questions[0].topic.subject.class.id,

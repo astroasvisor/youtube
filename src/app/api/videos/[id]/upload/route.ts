@@ -42,7 +42,19 @@ export async function POST(
         topic: true,
         questions: {
           include: {
-            question: true,
+            question: {
+              select: {
+                text: true,
+                optionA: true,
+                optionB: true,
+                optionC: true,
+                optionD: true,
+                correctAnswer: true,
+                explanation: true,
+                suggestedVideoTitle: true,
+                suggestedVideoDesc: true,
+              }
+            },
           },
         },
       },
@@ -88,16 +100,40 @@ export async function POST(
 
       // Build final description with question content appended
       const q = video.questions?.[0]?.question
-      const baseDescription = video.description || `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`
+
+      // Priority 1: Question's AI-generated SEO description
+      // Priority 2: Video's own description
+      // Priority 3: Generic fallback
+      let baseDescription = q?.suggestedVideoDesc || video.description
+      if (!baseDescription) {
+        baseDescription = `Quiz video for ${video.class.name} ${video.subject.name} - ${video.topic.name}`
+      }
+      
+      if (q?.suggestedVideoDesc) {
+        console.log(`Using AI-generated SEO description for question: ${q.text.substring(0, 50)}...`)
+      }
+
       const questionBlock = q
-        ? `\n\nQuestion: ${q.text}\nA) ${q.optionA}\nB) ${q.optionB}\nC) ${q.optionC}\nD) ${q.optionD}\nAnswer: ${q.correctAnswer}\n`
+        ? `\n\nQuestion: ${q.text}\nA) ${q.optionA}\nB) ${q.optionB}\nC) ${q.optionC}\nD) ${q.optionD}\n\nAnswer: ${q.correctAnswer}\n\nExplanation: ${q.explanation}\n`
         : ""
       const finalDescription = `${baseDescription}${questionBlock}`
+
+      // Priority 1: Question's AI-generated SEO title
+      // Priority 2: Video's own title
+      // Priority 3: Generic fallback
+      let videoTitle = q?.suggestedVideoTitle || video.title
+      if (!videoTitle) {
+        videoTitle = `Quiz: ${video.topic.name}`
+      }
+      
+      if (q?.suggestedVideoTitle) {
+        console.log(`Using AI-generated SEO title for question: ${q.text.substring(0, 50)}...`)
+      }
 
       // Upload to YouTube using session tokens with playlist management
       const uploadResult = await uploadToYouTube(
         videoPath,
-        video.title,
+        videoTitle,
         finalDescription,
         tags,
         session.accessToken as string,
