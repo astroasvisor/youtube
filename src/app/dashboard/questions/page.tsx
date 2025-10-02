@@ -39,10 +39,12 @@ export default function QuestionsPage() {
     topicId: "",
     count: 5,
     difficulty: "MEDIUM" as "EASY" | "MEDIUM" | "HARD",
+    mode: "BASIC" as "BASIC" | "ADVANCED",
   })
   const [multiTopicForm, setMultiTopicForm] = useState({
     classId: "",
     difficulty: "MEDIUM" as "EASY" | "MEDIUM" | "HARD",
+    mode: "BASIC" as "BASIC" | "ADVANCED",
   })
   const [selectedTopics, setSelectedTopics] = useState<Array<{
     subjectId: string
@@ -248,6 +250,7 @@ export default function QuestionsPage() {
       topicId: "",
       count: 5,
       difficulty: "MEDIUM",
+      mode: "BASIC",
     })
 
     try {
@@ -287,6 +290,7 @@ export default function QuestionsPage() {
     setMultiTopicForm({
       classId: "",
       difficulty: "MEDIUM",
+      mode: "BASIC",
     })
     setSelectedTopics([])
 
@@ -300,6 +304,7 @@ export default function QuestionsPage() {
           classId: multiTopicForm.classId,
           count: count,
           difficulty: multiTopicForm.difficulty,
+          mode: multiTopicForm.mode,
           subjectsPerRun: 4, // This can be adjusted or made dynamic if needed
           previewMode: false,
         }),
@@ -705,6 +710,46 @@ export default function QuestionsPage() {
                     <option value="HARD" className="text-gray-900">Hard</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Question Mode
+                  </label>
+                  <div className="mt-1 flex rounded-md shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setGenerateForm({ ...generateForm, mode: "BASIC" })}
+                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-l-md border transition-colors ${
+                        generateForm.mode === "BASIC"
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold">Basic</span>
+                        <span className="text-xs mt-1 opacity-90">Fun & Engaging</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGenerateForm({ ...generateForm, mode: "ADVANCED" })}
+                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-r-md border transition-colors ${
+                        generateForm.mode === "ADVANCED"
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold">Advanced</span>
+                        <span className="text-xs mt-1 opacity-90">NEET/JEE Prep</span>
+                      </div>
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {generateForm.mode === "BASIC" 
+                      ? "YouTube Shorts optimized - Fun, engaging questions with interesting facts"
+                      : "Competitive exam focused - Conceptually challenging NEET/JEE style questions"}
+                  </p>
+                </div>
                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                   <button
                     onClick={() => setShowGenerateForm(false)}
@@ -794,6 +839,47 @@ export default function QuestionsPage() {
                   </select>
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Question Mode
+                  </label>
+                  <div className="mt-1 flex rounded-md shadow-sm">
+                    <button
+                      type="button"
+                      onClick={() => setMultiTopicForm({ ...multiTopicForm, mode: "BASIC" })}
+                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-l-md border transition-colors ${
+                        multiTopicForm.mode === "BASIC"
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold">Basic</span>
+                        <span className="text-xs mt-1 opacity-90">Fun & Engaging</span>
+                      </div>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMultiTopicForm({ ...multiTopicForm, mode: "ADVANCED" })}
+                      className={`flex-1 px-4 py-2 text-sm font-medium rounded-r-md border transition-colors ${
+                        multiTopicForm.mode === "ADVANCED"
+                          ? "bg-indigo-600 text-white border-indigo-600"
+                          : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex flex-col items-center">
+                        <span className="font-semibold">Advanced</span>
+                        <span className="text-xs mt-1 opacity-90">NEET/JEE Prep</span>
+                      </div>
+                    </button>
+                  </div>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {multiTopicForm.mode === "BASIC" 
+                      ? "YouTube Shorts optimized - Fun, engaging questions with interesting facts"
+                      : "Competitive exam focused - Conceptually challenging NEET/JEE style questions"}
+                  </p>
+                </div>
+
                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                   <button
                     onClick={() => {
@@ -801,6 +887,7 @@ export default function QuestionsPage() {
                       setMultiTopicForm({
                         classId: "",
                         difficulty: "MEDIUM",
+                        mode: "BASIC",
                       })
                       setSelectedTopics([])
                     }}

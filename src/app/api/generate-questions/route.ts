@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
-import { generateQuestions } from "@/lib/question-generation"
+import { generateQuestionsForSingleTopic } from "@/lib/question-generation"
 import { prisma } from "@/lib/prisma"
 import { Difficulty } from "@prisma/client"
 
 // POST /api/generate-questions - Generate questions using OpenAI
 export async function POST(request: Request) {
   try {
-    const { classId, subjectId, topicId, count = 5, difficulty = "MEDIUM" } = await request.json()
+    const { classId, subjectId, topicId, count = 5, difficulty = "MEDIUM", mode = "BASIC" } = await request.json()
 
     if (!classId || !subjectId || !topicId) {
       return NextResponse.json(
@@ -45,13 +45,14 @@ export async function POST(request: Request) {
     const subjectName = topic.subject.name
     const topicName = topic.name
 
-    // Generate questions using OpenAI
-    const questions = await generateQuestions(
+    // Generate questions using OpenAI (batch generation for efficiency)
+    const questions = await generateQuestionsForSingleTopic(
       className,
       subjectName,
       topicName,
       count,
-      difficulty
+      difficulty,
+      mode // Pass the mode (BASIC or ADVANCED)
     )
 
     // Save questions to database

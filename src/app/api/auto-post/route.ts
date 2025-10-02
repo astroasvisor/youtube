@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
-import { generateVideoContentForSubjects } from "@/lib/openai"
+import { generateVideoContentForSubjects } from "@/lib/video-content-generation"
 import { selectTopicsForVideoGeneration, recordTopicUsage, getTopicsHistory } from "@/lib/topic-selection"
 import { Video, Question } from "@prisma/client"
 import { uploadToYouTube, generateYouTubeTags } from "@/lib/youtube"

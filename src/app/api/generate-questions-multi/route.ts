@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { generateQuestionsForTopics } from "@/lib/question-generation"
+import { generateQuestionsForMultipleTopics } from "@/lib/question-generation"
 import { prisma } from "@/lib/prisma"
 import { selectTopicsForVideoGeneration } from "@/lib/topic-selection"
 import { Difficulty } from "@prisma/client"
@@ -7,7 +7,7 @@ import { Difficulty } from "@prisma/client"
 // POST /api/generate-questions-multi - Generate questions using OpenAI for multiple topics (one per subject)
 export async function POST(request: Request) {
   try {
-    const { classId, count = 5, difficulty = "MEDIUM", subjectsPerRun = 4, previewMode = false } = await request.json()
+    const { classId, count = 5, difficulty = "MEDIUM", subjectsPerRun = 4, previewMode = false, mode = "BASIC" } = await request.json()
 
     if (!classId) {
       return NextResponse.json(
@@ -65,11 +65,12 @@ export async function POST(request: Request) {
     }
 
     const questionsPerTopic = Math.ceil(count / selectedTopics.length)
-    const allGeneratedQuestions = await generateQuestionsForTopics(
+    const allGeneratedQuestions = await generateQuestionsForMultipleTopics(
       classData.name,
       difficulty,
       selectedTopics.map(t => ({ id: t.topicId, name: t.topicName, subjectName: t.subjectName })),
-      questionsPerTopic
+      questionsPerTopic,
+      mode // Pass the mode (BASIC or ADVANCED)
     )
 
     const savedQuestions = []
