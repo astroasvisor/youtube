@@ -65,6 +65,26 @@ export default function VideosPage() {
     }
   }
 
+  const regenerateVideo = async (video: VideoWithDetails) => {
+    try {
+      const response = await fetch(`/api/videos/${video.id}/regenerate`, {
+        method: "POST",
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        fetchVideos() // Refresh the video list
+        alert(`✅ Video regeneration started successfully!\n\nNew video ID: ${result.newVideo.id}\nOld video will be replaced once generation completes.`)
+      } else {
+        const error = await response.json()
+        alert(`❌ Regeneration failed: ${error.error}`)
+      }
+    } catch (error) {
+      console.error("Error regenerating video:", error)
+      alert("❌ Failed to regenerate video. Please check your connection and try again.")
+    }
+  }
+
   const getStatusColor = (status: VideoStatus) => {
     switch (status) {
       case "DRAFT":
@@ -154,6 +174,16 @@ export default function VideosPage() {
                 </div>
               </div>
               <div className="flex space-x-2 ml-4">
+                {/* Show regenerate button for videos with questions that can be regenerated */}
+                {video.questions.length > 0 && (video.status === "FAILED" || video.status === "GENERATED" || video.status === "UPLOADED" || video.status === "DRAFT") && (
+                  <button
+                    onClick={() => regenerateVideo(video)}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-3 py-1 rounded text-sm font-medium shadow-sm transition-colors"
+                    title="Regenerate video using existing questions"
+                  >
+                    🔄 Regenerate
+                  </button>
+                )}
                 {video.status === "GENERATED" && (
                   <button
                     onClick={() => uploadToYouTube(video)}

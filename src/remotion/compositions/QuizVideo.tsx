@@ -75,7 +75,7 @@ const QuizVideoComposition: React.FC<{
       {/* Background music - starts at t=3s (at teaser screen onset) */}
       <Sequence from={3 * fps} durationInFrames={durationInFrames - (3 * fps)}>
         <Audio
-          src={staticFile("audio/background-music.mp3")}
+          src={staticFile("audio/background.m4a")}
           startFrom={0}
           volume={0.08}
           loop={true}
@@ -87,7 +87,7 @@ const QuizVideoComposition: React.FC<{
         <IntroScreen theme={theme} />
       </Sequence>
 
-      {/* Teaser Screen - 2 seconds */}
+      {/* Teaser Screen - 3 seconds */}
       <Sequence from={introDuration} durationInFrames={teaserDuration}>
         <ReadyForTeaser theme={theme} />
       </Sequence>

@@ -32,7 +32,7 @@ Your audio files are set up and ready to use:
 ✓ timer.mp3 (10s) - Timer sound that loops 3 times during 30s countdown
 ✓ chime.mp3 (1s) - Transition sound at question→answer phase change
 ✓ celebration.mp3 (1s) - Positive success chime for answer reveals
-✓ background-music.mp3 (29s) - Subtle ambient music (loops automatically)
+✓ background.m4a (29s) - Subtle ambient music (loops automatically)
 
 Volume levels are optimized:
 - Timer: 40% (clear but not overwhelming)
@@ -354,6 +354,7 @@ export const QuizQuestion: React.FC<{
             gap: "20px",
             width: "96%",
             maxWidth: "1100px",
+            zIndex: 10, // Ensure options appear above character image
           }}
         >
           {[
@@ -414,6 +415,8 @@ export const QuizQuestion: React.FC<{
               alignItems: "center",
               justifyContent: "center",
               marginTop: "80px",
+              position: "relative",
+              zIndex: 1000,
               opacity: spring({
                 frame: frame - likeButtonStartFrame,
                 fps,
@@ -435,18 +438,17 @@ export const QuizQuestion: React.FC<{
                 style={{
                   fontSize: "48px",
                   fontWeight: "700",
-                  background: "linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57)",
-                  backgroundSize: "300% 300%",
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  background: "rgba(0, 0, 0, 0.7)", // Semi-transparent background for visibility
+                  padding: "8px 16px", // Padding around text
+                  borderRadius: "12px", // Rounded corners
+                  color: "white", // White text for contrast
                   fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-                  textShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
-                  filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))",
-                  animation: "gradientShift 3s ease-in-out infinite",
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)", // Dark shadow for better readability
+                  position: "relative",
+                  zIndex: 1000, // Ensure text appears above everything else including confetti
                 }}
               >
-                Hit like button if you found the answer
+                Hit Subscribe if you liked the question
               </span>
               <div
                 style={{
@@ -632,6 +634,8 @@ export const QuizQuestion: React.FC<{
               alignItems: "center",
               justifyContent: "center",
               marginTop: "40px",
+              position: "relative",
+              zIndex: 1000,
               opacity: spring({
                 frame: frame - subscribeStartFrame,
                 fps,
@@ -653,18 +657,17 @@ export const QuizQuestion: React.FC<{
                 style={{
                   fontSize: "48px",
                   fontWeight: "700",
-                  background: "linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #96ceb4, #feca57)",
-                  backgroundSize: "300% 300%",
-                  backgroundClip: "text",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  background: "rgba(0, 0, 0, 0.7)", // Semi-transparent background for visibility
+                  padding: "8px 16px", // Padding around text
+                  borderRadius: "12px", // Rounded corners
+                  color: "white", // White text for contrast
                   fontFamily: "'Inter', 'Segoe UI', system-ui, sans-serif",
-                  textShadow: "0 0 20px rgba(255, 255, 255, 0.5)",
-                  filter: "drop-shadow(0 0 10px rgba(255, 255, 255, 0.3))",
-                  animation: "gradientShift 3s ease-in-out infinite",
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.8)", // Dark shadow for better readability
+                  position: "relative",
+                  zIndex: 1000, // Ensure text appears above everything else including confetti
                 }}
               >
-                Hit Subscribe if you liked the question
+                Hit Like if you liked the question
               </span>
               <div
                 style={{
@@ -701,7 +704,7 @@ export const QuizQuestion: React.FC<{
           <Audio
             src={staticFile("audio/timer.mp3")}
             startFrom={0}
-            volume={0.6}
+            volume={0.4}
             loop={true}
           />
         </>
